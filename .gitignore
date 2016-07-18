@@ -92,6 +92,9 @@ ENV/
 avatar.jpg
 tts.mp3
 image.jpg
+outimage.jpg
+tempCommands.p
+tempAnimations.p
 
 #Misc
 botconfig.ini
