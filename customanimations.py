@@ -8,7 +8,10 @@ class CustomAnimations():
     def __init__(self, client):
         self.client = client
         
-        self.tempAnimations = pickle.load(open("tempAnimations.p","rb"))
+        try:
+            self.tempAnimations = pickle.load(open("tempAnimations.p","rb"))
+        except:
+            self.tempAnimations = {}
     
     @commands.command()
     async def ca(self, animName : str, *frames : str):

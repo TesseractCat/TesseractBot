@@ -8,7 +8,10 @@ class CustomCommands():
     def __init__(self, client):
         self.client = client
         
-        self.tempCommands = pickle.load(open("tempCommands.p","rb"))
+        try:
+            self.tempCommands = pickle.load(open("tempCommands.p","rb"))
+        except:
+            self.tempCommands = {}
     
     async def on_message(self, message):
         self.lastMessage = message

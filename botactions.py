@@ -11,11 +11,14 @@ class BotActions():
     def __init__(self, client):
         self.client = client
         
-        lastMessage = pickle.load(open("lastMessage.p","rb"))
-        
-        if lastMessage != None:
-            nonAsyncRun(self.client.send_message,(lastMessage.channel, "Done!"))
-            pickle.dump(None, open("lastMessage.p","wb"))
+        try:
+            lastMessage = pickle.load(open("lastMessage.p","rb"))
+            
+            if lastMessage != None:
+                nonAsyncRun(self.client.send_message,(lastMessage.channel, "Done!"))
+                pickle.dump(None, open("lastMessage.p","wb"))
+        except:
+            pass
     
     @commands.command()
     async def sp(self, *, game : str):
