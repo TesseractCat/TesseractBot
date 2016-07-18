@@ -1,0 +1,7 @@
+discord.py==0.10.0
+gTTS==1.1.5
+imgurpython==1.1.7
+wolframalpha==2.4
+youtube_dl==2016.7.6
+Pillow==3.3.0
+urbandict==0.5

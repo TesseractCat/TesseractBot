@@ -91,3 +91,7 @@ ENV/
 #Temp files
 avatar.jpg
 tts.mp3
+image.jpg
+
+#Misc
+botconfig.ini
