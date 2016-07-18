@@ -1,0 +1,2 @@
+# TesseractBot
+Tesseract Discord Bot
