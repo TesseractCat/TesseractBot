@@ -91,23 +91,23 @@ class MusicActions():
         except:
             pass
         
-        if len(self.instances[ctx.message.server.id].queue) > 0:
-            self.instances[ctx.message.server.id].queue[0].pause()
+        #if len(self.instances[ctx.message.server.id].queue) > 0:
+        #    self.instances[ctx.message.server.id].queue[0].pause()
         
-        player = voiceClient.create_ffmpeg_player('tts.mp3')
-        player.start()
+        #player = voiceClient.create_ffmpeg_player('tts.mp3')
+        #player.start()
         
-        while True:
-            await asyncio.sleep(1)
-            if player.is_done():
-                break
+        #while True:
+        #    await asyncio.sleep(1)
+        #    if player.is_done():
+        #        break
                 
-        if len(self.instances[ctx.message.server.id].queue) > 0:
-            self.instances[ctx.message.server.id].queue[0].resume()
+        #if len(self.instances[ctx.message.server.id].queue) > 0:
+        #    self.instances[ctx.message.server.id].queue[0].resume()
         
-        #self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
+        self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
         
-        #await self.client.say("Added to queue, you are currently **#{}** in the queue".format(len(self.instances[ctx.message.server.id].queue)))
+        await self.client.say("Added to queue, you are currently **#{}** in the queue".format(len(self.instances[ctx.message.server.id].queue)))
         #self.instances[ctx.message.server.id].player = voiceClient.create_ffmpeg_player('tts.mp3')
         #self.instances[ctx.message.server.id].player.start()
         

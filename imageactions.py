@@ -40,7 +40,7 @@ class ImageActions():
     async def sgi(self, *, searchQuery : str):
         """Searches google images"""
         
-        response = urllib.request.urlopen("https://www.googleapis.com/customsearch/v1?q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM&cx=013069748485055050082:lrdbh42tc-o&searchType=image".format(searchQuery.replace(" ","%20")))
+        response = urllib.request.urlopen("https://www.googleapis.com/customsearch/v1?safe=high&q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM&cx=013069748485055050082:lrdbh42tc-o&searchType=image".format(searchQuery.replace(" ","%20")))
         response = response.read().decode("utf-8")
         response = json.loads(response.replace('\\"', "").replace("\\",r"\\").replace('""','"'))["items"][0]["link"]
         if len(response.split(":")) > 2:

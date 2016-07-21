@@ -40,8 +40,8 @@ class BotActions():
             if message.author == self.client.user:
                 await self.client.delete_message(message)
     
-    @commands.command()
-    async def sa(self, *, url : str):
+    @commands.command(pass_context = True)
+    async def sa(self, ctx, *, url : str):
         """Change the bots avatar"""
         
         if await checkOp(ctx.message):

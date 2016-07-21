@@ -27,7 +27,7 @@ waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["customcommands","customanimations","botactions","musicactions","imageactions"]
+cogs = ["customcommands","customanimations","botactions","musicactions","imageactions","ranks"]
 
 lastMessage = None
 
@@ -70,7 +70,11 @@ async def on_ready():
 async def on_message(message):
     global lastMessage
     lastMessage = message
-    print(message.author.name + "@" + message.channel.name + ": " + message.content)
+    
+    try:
+        print(message.author.name + "@" + message.server.name + "~" + message.channel.name + ": " + message.content)
+    except:
+        pass
     
     if message.author.id in banned:
         return
@@ -82,6 +86,13 @@ async def on_message(message):
         await bot(message)
     
     await client.process_commands(message)
+    
+@client.event
+async def on_channel_update(oldChannel, channel):
+    if oldChannel.topic != channel.topic:
+        await client.send_message(channel, "**{}**'s channel topic changed from **{}** to **{}**".format(channel.name,oldChannel.topic, channel.topic))
+    if oldChannel.name != channel.name:
+        await client.send_message(channel, "**{}**'s channel name changed to **{}**".format(oldChannel.name,channel.name))
 
 async def bot(message):
     """Commune with the bot!"""
