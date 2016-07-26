@@ -27,7 +27,7 @@ waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["customcommands","customanimations","botactions","musicactions","imageactions","ranks"]
+cogs = ["customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","ranks"]#,"ranks","rss"]
 
 lastMessage = None
 
@@ -155,8 +155,10 @@ async def wa(ctx,*, search : str):
             watext = ""
         else:
             watext+=bytes(pod.text.replace("\\:","\\u"),'utf-8').decode("unicode_escape") + "\n"
+    if len(waresult.pods) < 1:
+        watext += "*No results, please rephrase your query.*"
     await client.say(watext)
-
+    
 if __name__ == "__main__":
     client.run(token)
 

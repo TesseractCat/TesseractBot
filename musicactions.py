@@ -107,7 +107,7 @@ class MusicActions():
         
         self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
         
-        await self.client.say("Added to queue, you are currently **#{}** in the queue".format(len(self.instances[ctx.message.server.id].queue)))
+        #await self.client.say("Added to queue, you are currently **#{}** in the queue".format(len(self.instances[ctx.message.server.id].queue)))
         #self.instances[ctx.message.server.id].player = voiceClient.create_ffmpeg_player('tts.mp3')
         #self.instances[ctx.message.server.id].player.start()
         
