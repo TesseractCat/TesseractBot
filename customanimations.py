@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import pickle
 import asyncio
+from urllib.request import urlopen
 
 class CustomAnimations():
     

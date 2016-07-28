@@ -38,11 +38,35 @@ class ImageActions():
             await self.client.say(items[randomItem].link)
 
     @commands.command()
+    async def sbi(self, *, searchQuery : str):
+        """Searches bing images"""
+        
+        key = "TDZZ6YVo7aiuZu890EjYxZltaspM1oBAJkU7DCyy1i8"
+        url = "https://api.datamarket.azure.com/Bing/Search/v1/Image?Query=%27{}%27&$format=json".format(searchQuery.replace(" ","%20"))
+        
+        password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+        password_mgr.add_password(None, url, key, key)
+        handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+        opener = urllib.request.build_opener(handler)
+        
+        response = opener.open(url)
+        response = response.read().decode("utf-8")
+        response = json.loads(response)["d"]["results"][0]["MediaUrl"]
+        
+        
+        await self.client.say(response)
+        
+    @commands.command()
     async def sgi(self, *, searchQuery : str):
         """Searches google images"""
         
-        response = urllib.request.urlopen("https://www.googleapis.com/customsearch/v1?safe=high&q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM&cx=013069748485055050082:lrdbh42tc-o&searchType=image".format(searchQuery.replace(" ","%20")))
+        try:
+            response = urllib.request.urlopen("https://www.googleapis.com/customsearch/v1?safe=high&q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM&cx=013069748485055050082:lrdbh42tc-o&searchType=image".format(searchQuery.replace(" ","%20")))
+        except:
+            await self.client.say("*Google api quota exceeded, please try $sbi to search bing images.*")
+            return
         response = response.read().decode("utf-8")
+        
         response = json.loads(response.replace('\\"', "").replace("\\",r"\\").replace('""','"'))["items"][0]["link"]
         if len(response.split(":")) > 2:
             response = response.rsplit(":",1)[0]

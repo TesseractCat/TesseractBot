@@ -30,11 +30,10 @@ class MusicActions():
     @commands.command(pass_context=True)
     async def skp(self, ctx):
         """Stops music or text to speech"""
-        if await checkOp(ctx.message):
-            try:
-                self.instances[ctx.message.server.id].queue[0].stop()
-            except:
-                pass
+        try:
+            self.instances[ctx.message.server.id].queue[0].stop()
+        except:
+            pass
     
     @commands.command(pass_context=True)
     async def cp(self, ctx):
@@ -159,7 +158,6 @@ class MusicInstance():
         self.client = client
     
     def addToQueue(self, player, channel):
-        print(self.queue)
         nonAsyncRun(self.client.send_message, (channel, "Added to queue, you are currently **#{}** in the queue".format(len(self.queue)+1)))
         self.queue.append(player)
         if len(self.queue) == 1:

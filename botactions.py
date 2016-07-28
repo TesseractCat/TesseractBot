@@ -44,23 +44,21 @@ class BotActions():
     async def sa(self, ctx, *, url : str):
         """Change the bots avatar"""
         
-        if await checkOp(ctx.message):
-            request = urllib.request.Request(url,headers={'User-Agent': 'Mozilla/5.0'})
-            response = urllib.request.urlopen(request)
-            file = open("avatar.jpg","wb")
-            file.write(response.read())
-            
-            await self.client.edit_profile(avatar = open('avatar.jpg','rb').read())
-            
-            await self.client.say("Avatar set!")
+        request = urllib.request.Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(request)
+        file = open("avatar.jpg","wb")
+        file.write(response.read())
+        
+        await self.client.edit_profile(avatar = open('avatar.jpg','rb').read())
+        
+        await self.client.say("Avatar set!")
         
     @commands.command(pass_context = True)
     async def sn(self, ctx, *, name : str):
         """Change the bots nickname"""
-        if await checkOp(ctx.message):
-            await self.client.change_nickname(ctx.message.server.me, name)
-            
-            await self.client.say("Nickname set to: " + name)
+        await self.client.change_nickname(ctx.message.server.me, name)
+        
+        await self.client.say("Nickname set to: " + name)
        
     @commands.command()
     async def inv(self):
@@ -71,12 +69,12 @@ class BotActions():
     @commands.command(pass_context = True)
     async def rs(self,ctx):
         """Restarts the bot"""
-        if await checkOp(ctx.message):
-            lastMessage = await self.client.say("Restarting...")
         
-            pickle.dump(lastMessage, open("lastMessage.p","wb"))
-        
-            os.execl(sys.executable, sys.executable, *sys.argv)
+        lastMessage = await self.client.say("Restarting...")
+    
+        pickle.dump(lastMessage, open("lastMessage.p","wb"))
+    
+        os.execl(sys.executable, sys.executable, *sys.argv)
         
 def setup(client):
     client.add_cog(BotActions(client))

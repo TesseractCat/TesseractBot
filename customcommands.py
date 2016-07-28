@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from bot import nonAsyncRun, printToDiscord, checkOp
+from bot import nonAsyncRun, printToDiscord, checkOp, safeEval
 import pickle
 
 class CustomCommands():
@@ -21,23 +21,31 @@ class CustomCommands():
                 exec(self.tempCommands[key])
     
     @commands.command(pass_context = True)
+    async def ccs(self, ctx, commandName : str, *, commandCode : str):
+        """Simple version of custom command"""
+        
+        self.tempCommands.update({commandName:"printToDiscord(self.client,self.lastMessage.channel,safeEval('" + commandCode.replace("'","\\'") + "',{\"message\":self.lastMessage}))"})
+        pickle.dump(self.tempCommands, open("tempCommands.p", "wb"))
+        #,{'message':self.lastMessage}
+        
+        await self.client.say("Command '{}' defined!".format(commandName))
+    
+    @commands.command(pass_context = True)
     async def cc(self, ctx, commandName : str, *, commandCode : str):
         """Evaluates python [commandCode] when [command trigger] is called. """
         
-        if await checkOp(ctx.message):
-            self.tempCommands.update({commandName:commandCode})
-            pickle.dump(self.tempCommands, open("tempCommands.p", "wb"))
-            
-            await self.client.say("Command '{}' defined!".format(commandName))
+        self.tempCommands.update({commandName:commandCode})
+        pickle.dump(self.tempCommands, open("tempCommands.p", "wb"))
+        
+        await self.client.say("Command '{}' defined!".format(commandName))
 
     @commands.command(pass_context = True)
     async def rcc(self, ctx, *, commandName : str):
         """Removes custom command [commandName]"""
-        if await checkOp(ctx.message):
-            del self.tempCommands[commandName]
-            pickle.dump(self.tempCommands, open("tempCommands.p", "wb"))
-            
-            await self.client.say("Command '{}' deleted!".format(commandName))
+        del self.tempCommands[commandName]
+        pickle.dump(self.tempCommands, open("tempCommands.p", "wb"))
+        
+        await self.client.say("Command '{}' deleted!".format(commandName))
             
     @commands.command()
     async def lcc(self, *, commandName : str = None):
