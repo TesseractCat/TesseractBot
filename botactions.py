@@ -31,8 +31,6 @@ class BotActions():
        
        await self.client.say("The bot is now playing " + game)
     
-    
-    
     @commands.command(pass_context = True)
     async def cl(self, ctx, count : int = 500):
         """Clears messages since last boot"""

@@ -29,12 +29,19 @@ discord.opus.load_opus(find_library("opus"))
 #Cogs to load
 cogs = ["customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","ranks","weather","voting"]
 
+#Load settings
 config = configparser.ConfigParser()
 config.read('botconfig.ini')
 operators = config['Settings']['Operators'].replace(' ','').split(',')
 opCommands = config['Settings']['OpCommands'].replace(' ','').split(',')
 banned = config['Settings']['Banned'].replace(' ','').split(',')
 token = config['Settings']['Token'].replace(' ','')
+
+#Load announcement settings
+try:
+    announceChannel = pickle.load(open("announceChannel.p","rb"))
+except:
+    announceChannel = {}
 
 def nonAsyncRun(function, args):
     loop = asyncio.get_event_loop()
@@ -94,6 +101,22 @@ async def on_channel_update(oldChannel, channel):
     if oldChannel.name != channel.name:
         await client.send_message(channel, "**{}**'s channel name changed to **{}**".format(oldChannel.name,channel.name))
 
+@client.event
+async def on_member_ban(member):
+    await client.send_message(announceChannel[member.server.id],"User **{}** has been banned!".format(member.name))
+
+@client.event
+async def on_member_unban(server, member):
+    await client.send_message(announceChannel[server.id],"User **{}** has been unbanned!".format(member.name))        
+
+@client.command(pass_context = True)
+async def sac(ctx, channel : discord.Channel = None):
+    announceChannel[ctx.message.server.id] = channel
+    
+    pickle.dump(announceChannel, open("announceChannel.p","wb"))
+    
+    await client.say("The bot's announcement channel is now set to **{}**".format(channel.name))
+    
 async def bot(message):
     """Commune with the bot!"""
     
