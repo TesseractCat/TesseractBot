@@ -89,26 +89,7 @@ class MusicActions():
             self.instances[ctx.message.server.id].player.stop()
         except:
             pass
-        
-        #if len(self.instances[ctx.message.server.id].queue) > 0:
-        #    self.instances[ctx.message.server.id].queue[0].pause()
-        
-        #player = voiceClient.create_ffmpeg_player('tts.mp3')
-        #player.start()
-        
-        #while True:
-        #    await asyncio.sleep(1)
-        #    if player.is_done():
-        #        break
-                
-        #if len(self.instances[ctx.message.server.id].queue) > 0:
-        #    self.instances[ctx.message.server.id].queue[0].resume()
-        
         self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
-        
-        #await self.client.say("Added to queue, you are currently **#{}** in the queue".format(len(self.instances[ctx.message.server.id].queue)))
-        #self.instances[ctx.message.server.id].player = voiceClient.create_ffmpeg_player('tts.mp3')
-        #self.instances[ctx.message.server.id].player.start()
         
     @commands.command(pass_context=True)
     async def pyv(self, ctx, *, url : str = None):
@@ -136,9 +117,7 @@ class MusicActions():
         except:
             pass
         
-        #self.instances[ctx.message.server.id].player = await voiceClient.create_ytdl_player(url)
-        self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)        
-        #self.instances[ctx.message.server.id].player.start()
+        self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
 
     @commands.command()
     async def syv(self, *, searchQuery : str):
@@ -174,7 +153,11 @@ class MusicInstance():
                     try:
                         await self.client.send_message(channel, "Now playing **{}**...".format(self.queue[0].title))
                     except:
-                        await self.client.send_message(channel, "Now playing next item in queue...")
+                        if len(self.queue) > 0:
+                            await self.client.send_message(channel, "Now playing next item in queue...")
+                        else:
+                            await self.client.send_message(channel, "Done playing music!")
+                            await self.client.voice_client_in(channel.server).disconnect()
                 elif self.votes > 2:
                     self.queue[0].stop()
                 else:

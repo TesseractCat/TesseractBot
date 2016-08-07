@@ -4,21 +4,27 @@ import os
 import sys
 import urllib.request
 import pickle
-from bot import nonAsyncRun, checkOp
+from bot import nonAsyncRun, checkOp, getShelfSlot
 
 class BotActions():
     
     def __init__(self, client):
         self.client = client
-        
-        try:
-            lastMessage = pickle.load(open("lastMessage.p","rb"))
-            
-            if lastMessage != None:
-                nonAsyncRun(self.client.send_message,(lastMessage.channel, "Done!"))
-                pickle.dump(None, open("lastMessage.p","wb"))
-        except:
-            pass
+    
+    #@commands.command(pass_context = True)
+    #async def setprefix(self, ctx, prefix : str = "$"):
+    #    """Changes the command prefix default '$'"""
+    #    
+    #    saveServerData(ctx.message.server.id, "prefix", prefix)
+    #    
+    #   await self.client.say("Prefix set to **{}**!".format(prefix))
+    #    
+    #@commands.command(pass_context = True)
+    #async def getprefix(self, ctx):
+    #    """Changes the command prefix default '$'"""
+    #    
+    #    await self.client.say("Prefix set to **{}**!".format(loadServerData(ctx.message.server.id, "prefix", "$")))
+    
     
     @commands.command()
     async def sp(self, *, game : str):
@@ -64,15 +70,11 @@ class BotActions():
        
        await self.client.say("Here you go, I know you're going to be amazed: " + "https://discordapp.com/oauth2/authorize?client_id=168158801231347713&scope=bot&permissions=0")  
 
-    @commands.command(pass_context = True)
-    async def rs(self,ctx):
-        """Restarts the bot"""
-        
-        lastMessage = await self.client.say("Restarting...")
-    
-        pickle.dump(lastMessage, open("lastMessage.p","wb"))
-    
-        os.execl(sys.executable, sys.executable, *sys.argv)
+    #@commands.command(pass_context = True)
+    #async def rs(self,ctx):
+    #    """Restarts the bot"""
+    #    
+    #    await self.client.say("Restarting...")
         
 def setup(client):
     client.add_cog(BotActions(client))

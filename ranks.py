@@ -3,8 +3,9 @@ from discord.ext import commands
 import pickle
 import asyncio
 import math
-from bot import checkOp
+from bot import checkOp, getShelfSlot
 import threading
+import atexit
 
 class Ranks():
     
@@ -13,25 +14,27 @@ class Ranks():
         
         self.tempMessageList = []
         
-        try:
-            self.ranks = pickle.load(open("ranks.p","rb"))
-        except:
-            self.ranks = {}
+        self.ranks = {}
+        
+        for server in self.client.servers:
+            self.ranks[server.id] = getShelfSlot(server.id, "Ranks")
             
-        loop = asyncio.get_event_loop()
-        loop.call_soon_threadsafe(asyncio.async, self.saveRanks())
+        atexit.register(self.do_sync)
     
-    async def saveRanks(self):
-        while True:
-            pickle.dump(self.ranks,open("ranks.p","rb+"))
-            await asyncio.sleep(300)
-     
+    def do_sync(self):
+        for server, data in self.ranks.items():
+            data.close()
+    
     async def on_message(self, message):
         self.parseMessage(message)
     
     def parseMessage(self, message):
+    
         self.tempMessageList.extend(message.content.split(" "))
         self.tempMessageList = self.tempMessageList[-200:]
+        
+        if message.author == self.client.user:
+            return
         
         if len(message.content) > 500:
             return
@@ -46,33 +49,29 @@ class Ranks():
                         xpToAdd += 1
                 else:
                     xpToAdd += 2
-            self.ranks[message.author] += max(min(xpToAdd, 10), 0)
+            self.ranks[message.server.id][message.author.name] += max(min(xpToAdd, 10), 0)
         except:
-            self.ranks[message.author] = 0
-        
-        try:
-            del self.ranks[self.client.user]
-        except:
-            pass
-            
-        #pickle.dump(self.ranks,open("ranks.p","rb+"))
+            self.ranks[message.server.id][message.author.name] = 0
 
     @commands.command(pass_context = True)
     async def rank(self, ctx, member : discord.Member = None):
         """Get rank of poster or other user"""
         
         if member == None:
-            await self.client.say("{}, you are level `{}` with `{}` xp. Overall you are rank `{}`".format(ctx.message.author.mention, math.floor(self.ranks[ctx.message.author]/300), self.ranks[ctx.message.author], [y[0] for y in reversed(sorted(self.ranks.items(), key=lambda x:x[1]))].index(ctx.message.author)+1))
+            await self.client.say("{}, you are level `{}` with `{}` xp. Overall you are rank `{}`".format(ctx.message.author.mention, math.floor(self.ranks[ctx.message.server.id][ctx.message.author.name]/300), self.ranks[ctx.message.server.id][ctx.message.author.name], [y[0] for y in reversed(sorted(self.ranks[ctx.message.server.id].items(), key=lambda x:x[1]))].index(ctx.message.author.name)+1))
         else:
             try:
-                await self.client.say("{} is level `{}` with `{}` xp. Overall they are rank `{}`".format(member.mention, math.floor(self.ranks[member]/300), self.ranks[member], [y[0] for y in reversed(sorted(self.ranks.items(), key=lambda x:x[1]))].index(member)+1))
+                await self.client.say("{} is level `{}` with `{}` xp. Overall they are rank `{}`".format(member.mention, math.floor(self.ranks[ctx.message.server.id][member.name]/300), self.ranks[ctx.message.server.id][member.name], [y[0] for y in reversed(sorted(self.ranks[ctx.message.server.id].items(), key=lambda x:x[1]))].index(member.name)+1))
             except:
                 await self.client.say("{} is level 0 with 0 xp".format(member.mention))
     
     @commands.command(pass_context = True)
     async def setrank(self, ctx, member : discord.Member, rank : int):
-        if await checkOp(ctx.message):
-            self.ranks[member] = rank
+        self.ranks[ctx.message.server.id][member.name] = rank
+        
+    @commands.command(pass_context = True)
+    async def setrankbyname(self, ctx, member : str, rank : int):
+        self.ranks[ctx.message.server.id][member] = rank
     
     @commands.command(pass_context = True)
     async def levels(self, ctx):
@@ -80,8 +79,13 @@ class Ranks():
         
         lvlText = "**--- Levels ---**\n\n"
         
-        for user, rank in reversed(sorted(self.ranks.items(), key=lambda x:x[1])):
-            lvlText += str([y[0] for y in reversed(sorted(self.ranks.items(), key=lambda x:x[1]))].index(user)+1) + ". " + str(user) + ": `" + str(rank) + "` xp | `" + str(math.floor(rank/300)) + "` lvl(s)\n\n"
+        topNum = 0
+        
+        for user, rank in reversed(sorted(self.ranks[ctx.message.server.id].items(), key=lambda x:x[1])):
+            topNum += 1
+            if topNum > 45:
+                break
+            lvlText += str([y[0] for y in reversed(sorted(self.ranks[ctx.message.server.id].items(), key=lambda x:x[1]))].index(user)+1) + ". " + str(user) + ": `" + str(rank).replace("`","").replace("*","").replace("_","") + "` xp | `" + str(math.floor(rank/300)) + "` lvl(s)\n\n"
         
         def chunks(s, n):
             """Produce n-character chunks from s."""
