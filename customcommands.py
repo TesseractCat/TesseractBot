@@ -29,7 +29,7 @@ class CustomCommands():
                 #context = js2py.EvalJs({"message":message})
                 #context.execute("function cc() {" + self.tempCommands[message.server.id][key].replace("pyimport","") + "}")
                 #await self.client.send_message(message.channel, context.cc())
-                await client.say(safeEval(code, {"message": message}))
+                await self.client.send_message(message.channel, safeEval(self.tempCommands[message.server.id][key], {"message": message}))
                 #context = execjs.compile("message = '{}'".format(message.content.replace("'","\\'")))
                 #await self.client.send_message(message.channel, context.exec_(self.tempCommands[message.server.id][key]))
     
