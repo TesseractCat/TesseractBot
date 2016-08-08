@@ -28,6 +28,7 @@ import shelve
 import atexit
 import execjs
 import js2py
+import multiprocessing
 
 #Wolfram Alpha Client
 waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
@@ -170,15 +171,28 @@ async def bot(message):
 @client.command(pass_context = True)
 async def ev(ctx, *, code : str):
     """Evaluates a python statement"""
-    context = js2py.EvalJs({"message":ctx.message})
-    await client.say(context.eval(code))
+    #context = js2py.EvalJs({"message":ctx.message})
+    await client.say(safeEval("return " + code, {"message": ctx.message}))
 
-def safeEval(code, args = None):
-    safe_dict = {"abs":abs,"all":all,"any":any,"ascii":ascii,"bin":bin,"bool":bool,"dict":dict,"filter":filter,"float":float,"hex":hex,"int":int,"len":len,"range":range,"max":max,"min":min,"pow":pow,"reversed":reversed,"list":list,"sum":sum,"slice":slice,"str":str,"tuple":tuple,"ord":ord,"chr":chr}
-    if args != None:
-        safe_dict = dict(safe_dict.items() | args.items())
-    return eval(code,{"__builtins__":None,"math":math},safe_dict)
-    #return execjs.eval(code)
+def safeEval(code, args = {}):
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
+
+    p = multiprocessing.Process(target=doEval, name="doEval", args = (code, return_dict, args))
+    p.start()
+    
+    p.join(1)
+    if p.is_alive():
+        p.terminate()
+        p.join()
+    
+    return return_dict["result"]
+    
+def doEval(code, ret, args = {}):
+    context = js2py.EvalJs(args)
+    context.execute("function cc() {" + code.replace("pyimport","") + "}")
+    
+    ret["result"] = context.cc()
 
 @client.command()
 async def df(word : str, defNum : int = 1):

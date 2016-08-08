@@ -26,9 +26,10 @@ class CustomCommands():
     async def on_message(self, message):
         for key in self.tempCommands[message.server.id]:
             if message.content.startswith(key) and message.author != self.client.user:
-                context = js2py.EvalJs({"message":message.items()})
-                context.execute("function cc() {" + self.tempCommands[message.server.id][key] + "}")
-                await self.client.send_message(message.channel, context.cc())
+                #context = js2py.EvalJs({"message":message})
+                #context.execute("function cc() {" + self.tempCommands[message.server.id][key].replace("pyimport","") + "}")
+                #await self.client.send_message(message.channel, context.cc())
+                await client.say(safeEval(code, {"message": message}))
                 #context = execjs.compile("message = '{}'".format(message.content.replace("'","\\'")))
                 #await self.client.send_message(message.channel, context.exec_(self.tempCommands[message.server.id][key]))
     
