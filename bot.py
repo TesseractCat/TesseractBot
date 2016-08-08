@@ -27,6 +27,7 @@ import threading
 import shelve
 import atexit
 import execjs
+import js2py
 
 #Wolfram Alpha Client
 waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
@@ -35,7 +36,7 @@ waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather"]
+cogs = ["serverpage","voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather"]
 
 #Load settings
 config = configparser.ConfigParser()
@@ -111,7 +112,7 @@ async def on_message(message):
         pass
     
     for command in opCommands:
-        if (client.command_prefix(client, message) + command + " ") in message.content:
+        if (client.command_prefix(client, message) + command) in message.content:
             if await checkOp(message) == False:
                 return
     
@@ -169,14 +170,15 @@ async def bot(message):
 @client.command(pass_context = True)
 async def ev(ctx, *, code : str):
     """Evaluates a python statement"""
-    await client.say(str(safeEval(code)))
+    context = js2py.EvalJs({"message":ctx.message})
+    await client.say(context.eval(code))
 
 def safeEval(code, args = None):
-    #safe_dict = {"abs":abs,"all":all,"any":any,"ascii":ascii,"bin":bin,"bool":bool,"dict":dict,"filter":filter,"float":float,"hex":hex,"int":int,"len":len,"range":range,"max":max,"min":min,"pow":pow,"reversed":reversed,"list":list,"sum":sum,"slice":slice,"str":str,"tuple":tuple,"ord":ord,"chr":chr}
-    #if args != None:
-    #    safe_dict = dict(safe_dict.items() | args.items())
-    #return eval(code,{"__builtins__":None,"math":math},safe_dict)
-    return execjs.eval(code)
+    safe_dict = {"abs":abs,"all":all,"any":any,"ascii":ascii,"bin":bin,"bool":bool,"dict":dict,"filter":filter,"float":float,"hex":hex,"int":int,"len":len,"range":range,"max":max,"min":min,"pow":pow,"reversed":reversed,"list":list,"sum":sum,"slice":slice,"str":str,"tuple":tuple,"ord":ord,"chr":chr}
+    if args != None:
+        safe_dict = dict(safe_dict.items() | args.items())
+    return eval(code,{"__builtins__":None,"math":math},safe_dict)
+    #return execjs.eval(code)
 
 @client.command()
 async def df(word : str, defNum : int = 1):

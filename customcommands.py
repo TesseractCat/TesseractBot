@@ -4,13 +4,15 @@ from bot import nonAsyncRun, printToDiscord, checkOp, safeEval, getShelfSlot
 import pickle
 import threading
 import atexit
-import execjs
+import js2py
+import jsonpickle
 
 class CustomCommands():
     
     def __init__(self, client):
         self.client = client
         self.tempCommands = {}
+        
         
         for server in self.client.servers:
             self.tempCommands[server.id] = getShelfSlot(server.id, "CustomCommands")
@@ -22,11 +24,13 @@ class CustomCommands():
             data.close()
     
     async def on_message(self, message):
-        self.lastMessage = message
-        
         for key in self.tempCommands[message.server.id]:
             if message.content.startswith(key) and message.author != self.client.user:
-                await self.client.send_message(message.channel, execjs.exec_(self.tempCommands[message.server.id][key]))
+                context = js2py.EvalJs({"message":message.items()})
+                context.execute("function cc() {" + self.tempCommands[message.server.id][key] + "}")
+                await self.client.send_message(message.channel, context.cc())
+                #context = execjs.compile("message = '{}'".format(message.content.replace("'","\\'")))
+                #await self.client.send_message(message.channel, context.exec_(self.tempCommands[message.server.id][key]))
     
     
     @commands.command(pass_context = True)
