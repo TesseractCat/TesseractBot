@@ -29,6 +29,7 @@ import atexit
 import execjs
 import js2py
 import multiprocessing
+import builtins
 
 #Wolfram Alpha Client
 waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
@@ -37,12 +38,11 @@ waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["serverpage","voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather"]
+cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions"]
 
 #Load settings
 config = configparser.ConfigParser()
 config.read('botconfig.ini')
-operators = config['Settings']['Operators'].replace(' ','').split(',')
 opCommands = config['Settings']['OpCommands'].replace(' ','').split(',')
 banned = config['Settings']['Banned'].replace(' ','').split(',')
 token = config['Settings']['Token'].replace(' ','')
@@ -67,11 +67,18 @@ def printToDiscord(clientObj, channel, text):
     nonAsyncRun(clientObj.send_message,(channel,text))
     
 async def checkOp(message):
-    if message.author.id in operators:
+    operators = getShelfSlot(message.server.id, "Operators")
+    userPerms = message.author.permissions_in(message.channel)
+    
+    if "ids" not in operators:
+        operators["ids"] = []
+        
+    if message.author.id in operators["ids"] or userPerms.administrator == True or userPerms.manage_server == True:
         return True
     else:
         await client.send_message(message.channel,"You are not a bot operator, so you cannot use this command.")
         return False
+    operators.close()
 
 def getShelfSlot(serverID, name):
     try:
@@ -113,7 +120,7 @@ async def on_message(message):
         pass
     
     for command in opCommands:
-        if (client.command_prefix(client, message) + command) in message.content:
+        if message.content.startswith(client.command_prefix(client, message) + command):
             if await checkOp(message) == False:
                 return
     
@@ -124,7 +131,8 @@ async def on_message(message):
 
 #@client.event
 #async def on_error(event,*args,**kwargs):
-    #await client.send_message(args[0].channel,"Error in: " + str(event))
+#    print("ERROR " + str(event) + " WITH ARGS: " + args)
+#    await client.send_message(args[0].channel,"Error in: " + str(event))
     
 @client.event
 async def on_channel_update(oldChannel, channel):
@@ -172,7 +180,7 @@ async def bot(message):
 async def ev(ctx, *, code : str):
     """Evaluates a python statement"""
     #context = js2py.EvalJs({"message":ctx.message})
-    await client.say(safeEval("return " + code, {"message": ctx.message}))
+    await client.say(safeEval("return " + code, {"message": ctx.message, "list": getattr(builtins, "list")}))
 
 def safeEval(code, args = {}):
     manager = multiprocessing.Manager()
@@ -190,7 +198,7 @@ def safeEval(code, args = {}):
     
 def doEval(code, ret, args = {}):
     context = js2py.EvalJs(args)
-    context.execute("function cc() {" + code.replace("pyimport","") + "}")
+    context.execute("function cc() {" + code.replace("pyimport","").replace("__class__","") + "}")
     
     ret["result"] = context.cc()
 
@@ -301,6 +309,31 @@ async def mkv(ctx, channel : discord.Channel, messages : int = 500, stateSize : 
 async def trans(*, text : str):
     """Translate text to english (this function is very finnicky)"""
     await client.say(translate(text,"en"))
+
+@client.command(pass_context = True)
+async def remind(ctx, time : int, unit : str, *, text : str):
+    thread = threading.Thread(target=doRemind,args=(ctx, time, unit.lower(), text, asyncio.get_event_loop()))
+    thread.start()
+
+def doRemind(ctx, timeToSleep, unit, text, loop):
+  
+    if "second" in unit:
+        sleepTime = (timeToSleep)
+    elif "minute" in unit:
+        sleepTime = (timeToSleep*60)
+    elif "hour" in unit:
+        sleepTime = (timeToSleep*60*60)
+    elif "day" in unit:
+        sleepTime = (timeToSleep*60*60*24)
+    else:
+       loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.channel,"That is not a valid time unit, the available units are: seconds, minutes, hours, days"))
+       return
+    
+    loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.channel,"Ok! I will remind you in `{}` {}".format(timeToSleep, unit)))
+    
+    time.sleep(sleepTime)
+    
+    loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.author, "Hello! `{}` {} ago you asked me to remind you of:\n\n{}".format(timeToSleep, unit, text)))
 
 def get_input():
     while True:

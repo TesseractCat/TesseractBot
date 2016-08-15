@@ -3,11 +3,33 @@ from discord.ext import commands
 import pickle
 import asyncio
 from urllib.request import urlopen
+from bot import getShelfSlot
 
 class UserActions():
     
     def __init__(self, client):
         self.client = client
+    
+    @commands.command(pass_context = True)
+    async def op(self, ctx, member : discord.Member):
+        operators = getShelfSlot(ctx.message.server.id, "Operators")
+        try:
+            operators["ids"].append(member.id)
+        except:
+            operators["ids"] = [member.id]
+        operators.close()
+        
+        await self.client.say("**{}** opped!".format(member.name))
+        
+    @commands.command(pass_context = True)
+    async def deop(self, ctx, member : discord.Member):
+        operators = getShelfSlot(ctx.message.server.id, "Operators")
+        try:
+            operators["ids"].remove(member.id)
+            await self.client.say("**{}** deopped!".format(member.name))
+        except:
+            await self.client.say("**{}** is not an operator!".format(member.name))
+        operators.close()
     
     @commands.command(pass_context = True)
     async def gr(self, ctx, member : discord.Member, *, role : str):

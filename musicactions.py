@@ -7,7 +7,7 @@ import urllib.request
 import youtube_dl
 import urllib.parse
 import json
-from bot import nonAsyncRun, checkOp
+from bot import nonAsyncRun, checkOp, getShelfSlot
 import asyncio
 
 class MusicActions():
@@ -64,14 +64,8 @@ class MusicActions():
     async def ptts(self, ctx, *, text : str = None):
         """Plays tts in the voice channel you are currently in"""
         #if await checkOp(ctx.message):
-        if self.client.voice_client_in(ctx.message.server) == None:
-            voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
-        else:
-            if self.client.voice_client_in(ctx.message.server).channel.id == ctx.message.author.voice_channel.id:
-                voiceClient = self.client.voice_client_in(ctx.message.server)
-            elif self.client.voice_client_in(ctx.message.server).channel.id != ctx.message.author.voice_channel.id:
-                await self.client.voice_client_in(ctx.message.server).disconnect()
-                voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+        
+        voiceClient = await self.getVoiceClient(ctx)
         
         if len(ctx.message.content.rsplit(" ",1)[1]) == 2:
             try:
@@ -100,14 +94,7 @@ class MusicActions():
             response = json.loads(response.replace('\\"', "").replace("\\",r"\\").replace('""','"'))
             url = "https://www.youtube.com/watch?v=" + response['items'][0]['id']['videoId']
         
-        if self.client.voice_client_in(ctx.message.server) == None:
-            voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
-        else:
-            if self.client.voice_client_in(ctx.message.server).channel.id == ctx.message.author.voice_channel.id:
-                voiceClient = self.client.voice_client_in(ctx.message.server)
-            elif self.client.voice_client_in(ctx.message.server).channel.id != ctx.message.author.voice_channel.id:
-                await self.client.voice_client_in(ctx.message.server).disconnect()
-                voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+        voiceClient = await self.getVoiceClient(ctx)
         
         if ctx.message.server.id not in self.instances:
             self.instances[ctx.message.server.id] = MusicInstance(self.client)
@@ -119,6 +106,18 @@ class MusicActions():
         
         self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
 
+    async def getVoiceClient(self, ctx):
+        if self.client.voice_client_in(ctx.message.server) == None:
+            voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+        else:
+            if self.client.voice_client_in(ctx.message.server).channel.id == ctx.message.author.voice_channel.id:
+                voiceClient = self.client.voice_client_in(ctx.message.server)
+            elif self.client.voice_client_in(ctx.message.server).channel.id != ctx.message.author.voice_channel.id:
+                await self.client.voice_client_in(ctx.message.server).disconnect()
+                voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+                
+        return voiceClient
+        
     @commands.command()
     async def syv(self, *, searchQuery : str):
         """Finds the first result for a youtube search"""
@@ -126,6 +125,7 @@ class MusicActions():
         response = response.read().decode("utf-8")
         response = json.loads(response.replace('\\"', "").replace("\\",r"\\").replace('""','"'))
         await self.client.say("https://www.youtube.com/watch?v=" + response['items'][0]['id']['videoId'])
+    
         
 class MusicInstance():
     def __init__(self, client):
