@@ -26,9 +26,9 @@ class Ranks():
             data.close()
     
     async def on_message(self, message):
-        self.parseMessage(message)
+        await self.parseMessage(message)
     
-    def parseMessage(self, message):
+    async def parseMessage(self, message):
     
         self.tempMessageList.extend(message.content.split(" "))
         self.tempMessageList = self.tempMessageList[-200:]
@@ -52,7 +52,23 @@ class Ranks():
             self.ranks[message.server.id][message.author.name] += max(min(xpToAdd, 10), 0)
         except:
             self.ranks[message.server.id][message.author.name] = 0
+            
+        try:
+            for rank, level in self.ranks[message.server.id]["rolesAtRankDict"].items():
+                if self.ranks[message.server.id][message.author.name] > level:
+                    await self.client.add_roles(message.author, discord.utils.get(message.server.roles, name=rank))
+        except:
+            pass
 
+    @commands.command(pass_context = True)
+    async def giveroleatrank(self, ctx, roleName : str, level : int):
+        if "rolesAtRankDict" not in self.ranks[ctx.message.server.id]:
+            self.ranks[ctx.message.server.id]["rolesAtRankDict"] = {}
+    
+        self.ranks[ctx.message.server.id]["rolesAtRankDict"].update({roleName: level})
+        
+        await self.client.say("That role will be given once people recieve that rank!")
+            
     @commands.command(pass_context = True)
     async def rank(self, ctx, member : discord.Member = None):
         """Get rank of poster or other user"""

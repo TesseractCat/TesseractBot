@@ -41,23 +41,8 @@ discord.opus.load_opus(find_library("opus"))
 cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions"]
 
 #Load settings
-config = configparser.ConfigParser()
-config.read('botconfig.ini')
-opCommands = config['Settings']['OpCommands'].replace(' ','').split(',')
-banned = config['Settings']['Banned'].replace(' ','').split(',')
-token = config['Settings']['Token'].replace(' ','')
-
-#Load announcement settings
-try:
-    announceChannel = pickle.load(open("announceChannel.p","rb"))
-except:
-    announceChannel = {}
-    
-#Load quotes
-try:
-    quotes = pickle.load(open("quotes.p","rb"))
-except:
-    quotes = []
+opCommands = ["sn", "sa", "skp", "setrank", "rs", "setrankbyname", "op", "deop"]
+token = "MTc3NTY4NDY0NTAyNzg0MDAw.CopN0w.kkxeaiVyLinzJK7gV5o0481jees"
 
 def nonAsyncRun(function, args):
     loop = asyncio.get_event_loop()
@@ -111,7 +96,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.author.bot == True or message.author.id in banned:
+    if message.author.bot == True:
         return
 
     try:
@@ -143,19 +128,25 @@ async def on_channel_update(oldChannel, channel):
 
 @client.event
 async def on_member_ban(member):
-    await client.send_message(announceChannel[member.server.id],"User **{}** has been banned!".format(member.name))
+    announceChannel = getShelfSlot(member.server.id, "AnnounceChannel")
+    await client.send_message(announceChannel["channel"],"User **{}** has been banned!".format(member.name))
+    announceChannel.close()
 
 @client.event
 async def on_member_unban(server, member):
-    await client.send_message(announceChannel[server.id],"User **{}** has been unbanned!".format(member.name))        
+    announceChannel = getShelfSlot(server.id, "AnnounceChannel")
+    await client.send_message(announceChannel["channel"],"User **{}** has been unbanned!".format(member.name))     
+    announceChannel.close()
 
 @client.command(pass_context = True)
 async def sac(ctx, channel : discord.Channel = None):
     """Set a channel to announce bans and unbans! Run this command with no channel to reset the channel"""
-
-    announceChannel[ctx.message.server.id] = channel
     
-    pickle.dump(announceChannel, open("announceChannel.p","wb"))
+    announceChannel = getShelfSlot(ctx.message.server.id, "AnnounceChannel")
+    
+    announceChannel["channel"] = channel
+    
+    announceChannel.close()
     
     await client.say("The bot's announcement channel is now set to **{}**".format(channel.name))
     
@@ -248,6 +239,9 @@ async def wa(ctx,*, search : str):
 @client.group(pass_context = True)
 async def quote(ctx):
     """Manage quotes, run this command with no subcommands to get a random quote"""
+    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
+    if "quotes" not in quotes:
+        quotes["quotes"] = []
     if ctx.invoked_subcommand == None:
         if len(ctx.message.content.split(" "))>1:
             quote = int(ctx.message.content.split(" ")[1])
@@ -255,29 +249,32 @@ async def quote(ctx):
             quote = None
     
         if quote == None:
-            quoteRand = random.choice(quotes)
-            await client.say("**Quote #{}**\n{}".format(quotes.index(quoteRand)+1,quoteRand))
+            quoteRand = random.choice(quotes["quotes"])
+            await client.say("**Quote #{}**\n{}".format(quotes["quotes"].index(quoteRand)+1,quoteRand))
             return
             
         try:
-            await client.say(quotes[quote-1])
+            await client.say(quotes["quotes"][quote-1])
         except:
             await client.say("That's not a quote!")
+    quotes.close()
     
     
 @quote.command(pass_context = True)
 async def add(ctx, *, quote : str = None):
     """Add a quote"""
-    quotes.append("{} - **{}** in **{}** at **{}**".format(quote,ctx.message.author.name,ctx.message.channel.name,time.strftime("%d/%m/%Y")))
-    await client.say("Quote added as #{}!".format(len(quotes)))
-    pickle.dump(quotes,open("quotes.p","wb"))
+    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
+    quotes["quotes"].append("{} - **{}** in **{}** at **{}**".format(quote,ctx.message.author.name,ctx.message.channel.name,time.strftime("%d/%m/%Y")))
+    await client.say("Quote added as #{}!".format(len(quotes["quotes"])))
+    quotes.close()
 
 @quote.command(pass_context = True)
 async def delete(ctx, num : int):
     """Delete a quote"""
-    quotes[num-1] = "Deleted!"
+    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
+    quotes["quotes"][num-1] = "Deleted!"
     await client.say("Quote deleted!")
-    pickle.dump(quotes,open("quotes.p","wb"))
+    quotes.close()
         
 @client.command(pass_context = True)
 async def mal(ctx, *, searchQuery : str):
