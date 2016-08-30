@@ -69,7 +69,13 @@ class BotActions():
        """Add the best bot on discord to your own server!"""
        
        await self.client.say("Here you go, I know you're going to be amazed: " + "https://discordapp.com/oauth2/authorize?client_id=168158801231347713&scope=bot&permissions=0")  
-
+    
+    #@commands.command()
+    #async def stp(self):
+    #    await self.client.say("Stopping!")
+    #    self.client.close()
+        
+    
     #@commands.command(pass_context = True)
     #async def rs(self,ctx):
     #    """Restarts the bot"""

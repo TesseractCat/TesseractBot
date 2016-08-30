@@ -19,11 +19,16 @@ class Ranks():
         for server in self.client.servers:
             self.ranks[server.id] = getShelfSlot(server.id, "Ranks")
             
-        atexit.register(self.do_sync)
+        self.do_sync()
     
     def do_sync(self):
+        threading.Timer(60.0, self.do_sync).start()
+        
         for server, data in self.ranks.items():
             data.close()
+        
+        for server in self.client.servers:
+            self.ranks[server.id] = getShelfSlot(server.id, "Ranks")
     
     async def on_message(self, message):
         await self.parseMessage(message)

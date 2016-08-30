@@ -21,19 +21,22 @@ class RSS():
         
         self.tempRSS = {}
         
+        self.checkrss()
+        
+        self.update_rss_arr()
+        
+    def update_rss_arr(self):
         for server in self.client.servers:
             self.tempRSS[server.id] = getShelfSlot(server.id, "RSS")
-        
-        self.checkrss()
-        atexit.register(self.do_sync)
     
     def do_sync(self):
         for server, data in self.tempRSS.items():
             data.close()
     
     def checkrss(self):
-        threading.Timer(20.0, self.checkrss).start()
+        threading.Timer(30.0, self.checkrss).start()
         
+        self.update_rss_arr()
             
         for tempkey, tempval in self.tempRSS.items():
             for key, val in tempval.items():
@@ -46,29 +49,41 @@ class RSS():
     async def addrss(self, ctx, *, url : str):
         """Adds an rss feed to this channel"""
         
-        self.tempRSS[ctx.message.server.id][url] = {"channel":ctx.message.channel,"posted":[]}
+        slot = getShelfSlot(ctx.message.server.id, "RSS")
+        
+        slot[url] = {"channel":ctx.message.channel,"posted":[]}
         
         for post in feedparser.parse(url).entries:
-            self.tempRSS[ctx.message.server.id][url]["posted"].append(post)
+            slot[url]["posted"].append(post)
         
         await self.client.say("**{}** set as RSS for this channel!".format(url))
+        
+        slot.close()
         
     @commands.command(pass_context = True)
     async def stoprss(self, ctx, url : str):
         """Stops all rss feeds in this channel"""
         
-        del self.tempRSS[ctx.message.server.id][url]
+        slot = getShelfSlot(ctx.message.server.id, "RSS")
+        
+        del slot[url]
+        
+        slot.close()
         
         await self.client.say("RSS Stopped for this channel!")
         
     @commands.command(pass_context = True)
     async def listrss(self, ctx):
         """Lists all rss feeds in this channel"""
+        slot = getShelfSlot(ctx.message.server.id, "RSS")
+        
         await self.client.say("**--- RSS ---**")
         
-        for key, val in self.tempRSS[ctx.message.server.id].items():
+        for key, val in slot.items():
             if val["channel"] == ctx.message.channel:
                 await self.client.say(key)
+                
+        slot.close()
         
         
         

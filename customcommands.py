@@ -6,6 +6,7 @@ import threading
 import atexit
 import js2py
 import jsonpickle
+from urllib.request import urlopen
 
 class CustomCommands():
     
@@ -13,25 +14,16 @@ class CustomCommands():
         self.client = client
         self.tempCommands = {}
         
+        self.update_cc_arr()
         
+    def update_cc_arr(self):
         for server in self.client.servers:
             self.tempCommands[server.id] = getShelfSlot(server.id, "CustomCommands")
-            
-        atexit.register(self.do_sync)
-        
-    def do_sync(self):
-        for server, data in self.tempCommands.items():
-            data.close()
     
     async def on_message(self, message):
         for key in self.tempCommands[message.server.id]:
             if message.content.startswith(key) and message.author != self.client.user:
-                #context = js2py.EvalJs({"message":message})
-                #context.execute("function cc() {" + self.tempCommands[message.server.id][key].replace("pyimport","") + "}")
-                #await self.client.send_message(message.channel, context.cc())
-                await self.client.send_message(message.channel, safeEval(self.tempCommands[message.server.id][key], {"message": message}))
-                #context = execjs.compile("message = '{}'".format(message.content.replace("'","\\'")))
-                #await self.client.send_message(message.channel, context.exec_(self.tempCommands[message.server.id][key]))
+                await self.client.send_message(message.channel, safeEval(self.tempCommands[message.server.id][key], {"message": message}, ["urllib"]))
     
     
     @commands.command(pass_context = True)
@@ -39,40 +31,61 @@ class CustomCommands():
         """Simple version of custom command"""
         print(commandCode)
         
-        self.tempCommands[ctx.message.server.id].update({commandName:'return {}'.format(commandCode.replace("'","\\'"))})
-        #,{'message':self.lastMessage}
+        slot = getShelfSlot(ctx.message.server.id, "CustomCommands")
+        
+        slot.update({commandName:'return {}'.format(commandCode.replace("'","\\'"))})
+        
+        slot.close()
         
         await self.client.say("Command '{}' defined!".format(commandName))
+        
+        self.update_cc_arr()
     
     @commands.command(pass_context = True)
     async def cc(self, ctx, commandName : str, *, commandCode : str):
         """Evaluates javascript [commandCode] when [command trigger] is called. Return a value to be sent as a message"""
         
-        self.tempCommands[ctx.message.server.id].update({commandName:commandCode})
+        slot = getShelfSlot(ctx.message.server.id, "CustomCommands")
+        
+        slot.update({commandName:commandCode})
+        
+        slot.close()
         
         await self.client.say("Command '{}' defined!".format(commandName))
+        
+        self.update_cc_arr()
 
     @commands.command(pass_context = True)
     async def rcc(self, ctx, *, commandName : str):
         """Removes custom command [commandName]"""
         
-        del self.tempCommands[ctx.message.server.id][commandName]
+        slot = getShelfSlot(ctx.message.server.id, "CustomCommands")
+        
+        del slot[commandName]
+        
+        slot.close()
         
         await self.client.say("Command '{}' deleted!".format(commandName))
+        
+        self.update_cc_arr()
             
     @commands.command(pass_context = True)
     async def lcc(self, ctx, *, commandName : str = None):
         """Lists custom commands, or provide a command name and get more detail on it [commandName]"""
         
+        slot = getShelfSlot(ctx.message.server.id, "CustomCommands")
+        
         if commandName == None:
             commandListText = "**Defined custom commands**:\n"
-            for key in self.tempCommands[ctx.message.server.id]:
+            for key in slot:
                 commandListText += key + "\n"
         else:
             try:
-                commandListText = commandName + "'s code: ```" + self.tempCommands[ctx.message.server.id][commandName] + "```"
+                commandListText = commandName + "'s code: ```" + slot[commandName] + "```"
             except:
                 commandListText = commandName + " is not a currently defined command"
+        
+        slot.close()
         
         await self.client.say(commandListText)
         

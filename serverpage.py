@@ -27,7 +27,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return
 
 def run(server_class=http.server.HTTPServer, handler_class=http.server.BaseHTTPRequestHandler):
-    server_address = ('0.0.0.0', 80)
+    server_address = ('0.0.0.0', 8080)
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
         
@@ -41,7 +41,7 @@ class ServerPage():
     
     @commands.command(pass_context = True)
     async def serverstats(self, ctx):
-        await self.client.say("View this servers stats here: http://tessbot.octl.xyz/Servers/{} ".format(ctx.message.server.id))
+        await self.client.say("View this servers stats here: http://tessbot.octl.xyz:8080/Servers/{} ".format(ctx.message.server.id))
         
 def setup(client):
     global bot

@@ -38,7 +38,7 @@ waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions"]
+cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions","serverpage"]
 
 #Load settings
 opCommands = ["sn", "sa", "skp", "setrank", "rs", "setrankbyname", "op", "deop"]
@@ -105,7 +105,7 @@ async def on_message(message):
         pass
     
     for command in opCommands:
-        if message.content.startswith(client.command_prefix(client, message) + command):
+        if message.content.startswith(client.command_prefix(client, message) + command + " "):
             if await checkOp(message) == False:
                 return
     
@@ -149,6 +149,21 @@ async def sac(ctx, channel : discord.Channel = None):
     announceChannel.close()
     
     await client.say("The bot's announcement channel is now set to **{}**".format(channel.name))
+
+#@client.command(pass_context = True)
+#async def setprop(ctx, property : str, value):
+#    """Set bot property, do setprop list for a list of properties"""
+#    
+#    properties = ["AnnounceChannel"]
+#    
+#    if property == "list":
+#        for p in properties:
+#            prp = getShelfSlot(ctx.message.server.id, p)
+#            await client.say("{}: {}".format(p, str(prp)))
+#            prp.close()
+    #else:
+    #    prp = getShelfSlot(ctx.message.server.id, property)
+    #    prp["value"] = 
     
 async def bot(message):
     """Commune with the bot!"""
@@ -173,11 +188,13 @@ async def ev(ctx, *, code : str):
     #context = js2py.EvalJs({"message":ctx.message})
     await client.say(safeEval("return " + code, {"message": ctx.message, "list": getattr(builtins, "list")}))
 
-def safeEval(code, args = {}):
+#Eval Funcs
+    
+def safeEval(code, args = {}, pyimports = []):
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
 
-    p = multiprocessing.Process(target=doEval, name="doEval", args = (code, return_dict, args))
+    p = multiprocessing.Process(target=doEval, name="doEval", args = (code, return_dict, args, pyimports))
     p.start()
     
     p.join(1)
@@ -187,12 +204,42 @@ def safeEval(code, args = {}):
     
     return return_dict["result"]
     
-def doEval(code, ret, args = {}):
+def doEval(code, ret, args = {}, pyimports = []):
+    pyimportcode = "pyimport " + ";\npyimport ".join(pyimports) + ";\n"
+    codeToRun = pyimportcode + "function cc() {" + code.replace("pyimport","").replace("__class__","") + "}"
+
+    print("Evaluating: {}".format(codeToRun))
+    
     context = js2py.EvalJs(args)
-    context.execute("function cc() {" + code.replace("pyimport","").replace("__class__","") + "}")
+    context.execute(codeToRun)
     
     ret["result"] = context.cc()
 
+#End of eval funcs
+    
+@client.command(pass_context = True)
+async def rep(ctx, user : discord.User = None):
+    repDict = getShelfSlot(ctx.message.server.id, "Rep")
+    
+    if (user == ctx.message.author):
+        await client.say("You can't give yourself rep!")
+        return
+    
+    if (user == None):
+        try:
+            await client.say("You have `{}` rep!".format(repDict[ctx.message.author.id]))
+        except:
+            await client.say("You have no rep!")
+    else:
+        try:
+            repDict[user.id] += 1
+        except:
+            repDict[user.id] = 1
+            
+        await client.say("1 rep given to {}, they currently have `{}` rep.".format(user.mention, repDict[user.id]))
+    
+    repDict.close()
+    
 @client.command()
 async def df(word : str, defNum : int = 1):
     """Defines a word"""
@@ -302,10 +349,13 @@ async def mkv(ctx, channel : discord.Channel, messages : int = 500, stateSize : 
     text_model = markovify.Text(text, state_size=stateSize)
     await client.say(text_model.make_sentence(max_overlap_ratio = 0.9,max_overlap_total=30,tries=1000))
     
-@client.command()
-async def trans(*, text : str):
+@client.command(pass_context = True)
+async def trans(ctx, *, text : str):
     """Translate text to english (this function is very finnicky)"""
-    await client.say(translate(text,"en"))
+    if len(ctx.message.content.rsplit(" ",1)[1]) == 2:
+        await client.say(translate(ctx.message.content.rsplit(" ",1)[0].split(" ",1)[1],ctx.message.content.rsplit(" ",1)[1]))
+    else:
+        await client.say(translate(text,"en"))
 
 @client.command(pass_context = True)
 async def remind(ctx, time : int, unit : str, *, text : str):
@@ -313,7 +363,6 @@ async def remind(ctx, time : int, unit : str, *, text : str):
     thread.start()
 
 def doRemind(ctx, timeToSleep, unit, text, loop):
-  
     if "second" in unit:
         sleepTime = (timeToSleep)
     elif "minute" in unit:
@@ -336,6 +385,9 @@ def get_input():
     while True:
         try:
             user_input = input("> ")
+            if user_input == "exit":
+                client.close()
+                sys.exit()
         except KeyboardInterrupt:
             pass
     

@@ -107,14 +107,17 @@ class MusicActions():
         self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
 
     async def getVoiceClient(self, ctx):
-        if self.client.voice_client_in(ctx.message.server) == None:
-            voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
-        else:
-            if self.client.voice_client_in(ctx.message.server).channel.id == ctx.message.author.voice_channel.id:
-                voiceClient = self.client.voice_client_in(ctx.message.server)
-            elif self.client.voice_client_in(ctx.message.server).channel.id != ctx.message.author.voice_channel.id:
-                await self.client.voice_client_in(ctx.message.server).disconnect()
+        try:
+            if self.client.voice_client_in(ctx.message.server) == None:
                 voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+            else:
+                if self.client.voice_client_in(ctx.message.server).channel.id == ctx.message.author.voice_channel.id:
+                    voiceClient = self.client.voice_client_in(ctx.message.server)
+                elif self.client.voice_client_in(ctx.message.server).channel.id != ctx.message.author.voice_channel.id:
+                    await self.client.voice_client_in(ctx.message.server).disconnect()
+                    voiceClient = await self.client.join_voice_channel(ctx.message.author.voice_channel)
+        except:
+            return
                 
         return voiceClient
         
