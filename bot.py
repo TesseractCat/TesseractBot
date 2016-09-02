@@ -41,7 +41,7 @@ discord.opus.load_opus(find_library("opus"))
 cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions","serverpage"]
 
 #Load settings
-opCommands = ["sn", "sa", "skp", "setrank", "rs", "setrankbyname", "op", "deop"]
+opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext"]
 token = "MTc3NTY4NDY0NTAyNzg0MDAw.CopN0w.kkxeaiVyLinzJK7gV5o0481jees"
 
 def nonAsyncRun(function, args):
@@ -385,9 +385,6 @@ def get_input():
     while True:
         try:
             user_input = input("> ")
-            if user_input == "exit":
-                client.close()
-                sys.exit()
         except KeyboardInterrupt:
             pass
     

@@ -22,7 +22,7 @@ class CustomCommands():
     
     async def on_message(self, message):
         for key in self.tempCommands[message.server.id]:
-            if message.content.startswith(key) and message.author != self.client.user:
+            if message.content.split(" ")[0] == key and message.author != self.client.user:
                 await self.client.send_message(message.channel, safeEval(self.tempCommands[message.server.id][key], {"message": message}, ["urllib"]))
     
     

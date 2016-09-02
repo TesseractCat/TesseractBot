@@ -104,7 +104,8 @@ class MusicActions():
         except:
             pass
         
-        self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
+        if voiceClient != None:
+            self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
 
     async def getVoiceClient(self, ctx):
         try:

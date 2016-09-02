@@ -5,6 +5,7 @@ import sys
 import urllib.request
 import pickle
 from bot import nonAsyncRun, checkOp, getShelfSlot
+import bot
 
 class BotActions():
     
@@ -81,6 +82,24 @@ class BotActions():
     #    """Restarts the bot"""
     #    
     #    await self.client.say("Restarting...")
+    
+    @commands.command()
+    async def rldext(self, *, ext : str = None):
+        """Reload bot extension"""
+        
+        if (ext == None):
+            await self.client.say("Please choose an extension, currently available to be reloaded are:\n```" + "\n".join(bot.cogs) + "```")
+            return
+        
+        await self.client.say("Reloading extension!")
+        
+        try:
+            self.client.unload_extension(ext)
+        except:
+            pass
+        self.client.load_extension(ext)
+        
+        await self.client.say("Done!")
         
 def setup(client):
     client.add_cog(BotActions(client))
