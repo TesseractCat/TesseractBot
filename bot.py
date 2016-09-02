@@ -31,8 +31,12 @@ import js2py
 import multiprocessing
 import builtins
 
+#Load token file
+tokenFile = open('botconfig', 'r')
+tokenList = tokenFile.read().split("\n")
+
 #Wolfram Alpha Client
-waClient = wolframalpha.Client("2J69RV-TGJ5RGLKPA")
+waClient = wolframalpha.Client(tokenList[1])
 
 #Load Discord Opus
 discord.opus.load_opus(find_library("opus"))
@@ -42,7 +46,7 @@ cogs = ["voting","ranks","pastebin","customcommands","customanimations","botacti
 
 #Load settings
 opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext"]
-token = "MTc3NTY4NDY0NTAyNzg0MDAw.CopN0w.kkxeaiVyLinzJK7gV5o0481jees"
+token = tokenList[0]
 
 def nonAsyncRun(function, args):
     loop = asyncio.get_event_loop()
