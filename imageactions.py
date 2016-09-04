@@ -8,8 +8,7 @@ import json
 import random
 from PIL import Image
 from PIL import ImageFont
-from PIL import ImageDraw 
-import imageAscii
+from PIL import ImageDraw
 
 class ImageActions():
     
@@ -96,19 +95,6 @@ class ImageActions():
         pildraw.text((pilimage.size[0]/2 - piltextsize[0]/2, pilimage.size[1] - piltextsize[1] * 1.5),caption,(255,255,255),font=pilfont)
         pilimage.save('outimage.jpg')
         await self.client.upload(open("outimage.jpg","rb"))
-        
-    #@commands.command()
-    #async def ascii(self, url : str, size : int):
-    #    """Post image as ascii"""
-    #    
-    #    request = urllib.request.Request(url,headers={'User-Agent': 'Mozilla/5.0'})
-    #    response = urllib.request.urlopen(request)
-    #    file = open("image.jpg","wb")
-    #    file.write(response.read())
-    #    
-    #    print(imageAscii.handle_image_conversion("image.jpg",size))
-    #    
-    #    await self.client.say("```" + str(imageAscii.handle_image_conversion("image.jpg",size)) + "```")
         
 def setup(client):
     client.add_cog(ImageActions(client))

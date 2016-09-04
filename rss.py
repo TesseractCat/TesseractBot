@@ -11,6 +11,8 @@ import html
 import threading
 from bot import nonAsyncRun, getShelfSlot
 import atexit
+import copy
+import time
 
 class RSS():
     
@@ -19,31 +21,29 @@ class RSS():
         self.loop = asyncio.get_event_loop()
         self.lastChecked = datetime.datetime.now(timezone('UTC')).astimezone(timezone('US/Pacific'))
         
-        self.tempRSS = {}
-        
         self.checkrss()
-        
-        self.update_rss_arr()
-        
-    def update_rss_arr(self):
-        for server in self.client.servers:
-            self.tempRSS[server.id] = getShelfSlot(server.id, "RSS")
-    
-    def do_sync(self):
-        for server, data in self.tempRSS.items():
-            data.close()
     
     def checkrss(self):
-        threading.Timer(30.0, self.checkrss).start()
+        threading.Timer(15.0, self.checkrss).start()
         
-        self.update_rss_arr()
+        #print("Updating RSS!")
+        
+        for server in self.client.servers:
             
-        for tempkey, tempval in self.tempRSS.items():
-            for key, val in tempval.items():
-                for post in feedparser.parse(key).entries:
-                    if post not in val["posted"]:
-                        self.loop.call_soon_threadsafe(asyncio.async, self.client.send_message(val["channel"],"**{}**, *{}*: {}\n".format(post.title,html.unescape(re.sub(re.compile('<.*?>'), '', post.description)), post.link)))
-                        val["posted"].append(post)
+            try:
+                tempRSS = getShelfSlot(server.id, "RSS")
+                
+                for key, val in tempRSS.items():
+                    for post in feedparser.parse(key).entries:
+                        if post not in val["posted"]:
+                            print("New RSS feed post: " + post.title)
+                            self.loop.call_soon_threadsafe(asyncio.async, self.client.send_message(val["channel"],"**{}**, *{}*: {}\n".format(post.title,html.unescape(re.sub(re.compile('<.*?>'), '', post.description)), post.link)))
+                            val["posted"].append(post)
+                tempRSS.close()
+                
+                #print(server.id)
+            except Exception as e:
+                print("RSS Had a problem, " + str(type(e)))
     
     @commands.command(pass_context = True)
     async def addrss(self, ctx, *, url : str):
@@ -77,11 +77,13 @@ class RSS():
         """Lists all rss feeds in this channel"""
         slot = getShelfSlot(ctx.message.server.id, "RSS")
         
-        await self.client.say("**--- RSS ---**")
+        tempText = ""
         
         for key, val in slot.items():
             if val["channel"] == ctx.message.channel:
-                await self.client.say(key)
+                tempText += key + "\n"
+                
+        await self.client.say("**--- RSS ---**\n" + tempText)
                 
         slot.close()
         

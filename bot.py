@@ -28,25 +28,9 @@ import shelve
 import atexit
 import execjs
 import js2py
+import json
 import multiprocessing
 import builtins
-
-#Load token file
-tokenFile = open('botconfig', 'r')
-tokenList = tokenFile.read().split("\n")
-
-#Wolfram Alpha Client
-waClient = wolframalpha.Client(tokenList[1])
-
-#Load Discord Opus
-discord.opus.load_opus(find_library("opus"))
-
-#Cogs to load
-cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions","serverpage"]
-
-#Load settings
-opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext"]
-token = tokenList[0]
 
 def nonAsyncRun(function, args):
     loop = asyncio.get_event_loop()
@@ -62,12 +46,36 @@ async def checkOp(message):
     if "ids" not in operators:
         operators["ids"] = []
         
-    if message.author.id in operators["ids"] or userPerms.administrator == True or userPerms.manage_server == True:
+    if message.author.id in operators["ids"] or userPerms.administrator == True or userPerms.manage_server == True or message.author.id == "129757604506370048":
         return True
     else:
         await client.send_message(message.channel,"You are not a bot operator, so you cannot use this command.")
         return False
     operators.close()
+    
+def getToken(service, id = None):
+    #Make a JSON file containing your tokens, like:
+    #{
+    #"discord":"[TOKEN]",
+    #"wolframalpha":"[TOKEN]",
+    #"googleimages":"[TOKEN]"
+    #}
+
+    tokenFile = open('botconfig', 'r')
+    tokenJSON = json.loads(tokenFile.read())
+    
+    if id == None:
+        return tokenJSON[service]
+    else:
+        slot = getShelfSlot(id, "Tokens")
+        
+        try:
+            tokenReturn = slot[service]
+            slot.close()
+            return slot[service]
+        except:
+            slot.close()
+            return tokenJSON[service]
 
 def getShelfSlot(serverID, name):
     try:
@@ -78,12 +86,31 @@ def getShelfSlot(serverID, name):
         
 def getPrefix(bot, message):
     try:
-        return loadServerData(message.server.id, "prefix", "$")
+        if message.server.id not in prefixDict:
+            slot = getShelfSlot(message.server.id, "Prefix")
+            prefixDict.update({message.server.id:slot["Prefix"]})
+            slot.close()
+        return prefixDict[message.server.id]
     except:
         return "$"
 
 #Discord Client
 client = commands.Bot(command_prefix=getPrefix, description='Tesseract Multipurpose Bot', pm_help = True)
+
+#Wolfram Alpha Client
+waClient = wolframalpha.Client(getToken("wolframalpha"))
+
+#Load Discord Opus
+discord.opus.load_opus(find_library("opus"))
+
+#Cogs to load
+cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions","serverpage"]
+
+#Load settings
+opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext"]
+
+#Prefix dict
+prefixDict = {}
         
 @client.event
 async def on_ready():
@@ -153,52 +180,38 @@ async def sac(ctx, channel : discord.Channel = None):
     announceChannel.close()
     
     await client.say("The bot's announcement channel is now set to **{}**".format(channel.name))
-
-#@client.command(pass_context = True)
-#async def setprop(ctx, property : str, value):
-#    """Set bot property, do setprop list for a list of properties"""
-#    
-#    properties = ["AnnounceChannel"]
-#    
-#    if property == "list":
-#        for p in properties:
-#            prp = getShelfSlot(ctx.message.server.id, p)
-#            await client.say("{}: {}".format(p, str(prp)))
-#            prp.close()
-    #else:
-    #    prp = getShelfSlot(ctx.message.server.id, property)
-    #    prp["value"] = 
+    
+@client.command(pass_context = True)
+async def setprefix(ctx, *, prefix : str = "$"):
+    slot = getShelfSlot(ctx.message.server.id, "Prefix")
+    slot["Prefix"] = prefix
+    prefixDict.update({ctx.message.server.id:slot["Prefix"]})
+    slot.close()
+    
+    await client.say("Prefix set!")
     
 async def bot(message):
     """Commune with the bot!"""
-    
-    data = urllib.request.urlopen("http://pastebin.com/raw/ARqAhaTU")
-    cm = data.read().decode('utf-8').split("\n")
-    random_index = random.randrange(0,len(cm)-1)
-    text = cm[random_index].replace("  "," ")
-    if len(message.content.split(" ")) > 1 and message.content.split(" ")[1].startswith("<@"):
-        await client.send_message(message.channel, message.content.split(" ")[1] + text)
-    elif len(message.content.split(" ")) > 1 and not message.content.split(" ")[1].startswith("<@"):
-        #await client.send_message(message.channel, "<@{0}".format(message.author.id) + "> " + cbClient.ask(message.content.split(" ",1)[1]))
-        mitsukuResponse = subprocess.run(["node","mitsuku.js",message.content.split(" ",1)[1]], stdout=subprocess.PIPE).stdout
-        mitsukuResponse = re.compile(re.escape('mitsuku'), re.IGNORECASE).sub("Tess Bot",str(mitsukuResponse))
-        await client.send_message(message.channel, "<@{0}".format(message.author.id) + "> " + str(mitsukuResponse)[2:][:-3])
+    mitsukuResponse = subprocess.run(["node","mitsuku.js",message.content.split(" ",1)[1]], stdout=subprocess.PIPE).stdout
+    if message.server.me.nick != None:
+        mitsukuResponse = re.compile(re.escape('mitsuku'), re.IGNORECASE).sub(message.server.me.nick,str(mitsukuResponse))
     else:
-        await client.send_message(message.channel, "<@{0}".format(message.author.id) + ">" + text)
+        mitsukuResponse = re.compile(re.escape('mitsuku'), re.IGNORECASE).sub(message.server.me.name,str(mitsukuResponse))
+    await client.send_message(message.channel, "<@{0}".format(message.author.id) + "> " + str(mitsukuResponse)[2:][:-3])
 
 @client.command(pass_context = True)
 async def ev(ctx, *, code : str):
     """Evaluates a python statement"""
     #context = js2py.EvalJs({"message":ctx.message})
     await client.say(safeEval("return " + code, {"message": ctx.message, "list": getattr(builtins, "list")}))
-
+    
 #Eval Funcs
     
 def safeEval(code, args = {}, pyimports = []):
     manager = multiprocessing.Manager()
-    return_dict = manager.dict()
+    ret = manager.dict()
 
-    p = multiprocessing.Process(target=doEval, name="doEval", args = (code, return_dict, args, pyimports))
+    p = multiprocessing.Process(target=doEval, name="doEval", args = (code, ret, args, pyimports))
     p.start()
     
     p.join(1)
@@ -206,10 +219,14 @@ def safeEval(code, args = {}, pyimports = []):
         p.terminate()
         p.join()
     
-    return return_dict["result"]
+    return ret["result"]
     
 def doEval(code, ret, args = {}, pyimports = []):
-    pyimportcode = "pyimport " + ";\npyimport ".join(pyimports) + ";\n"
+    if pyimports != []:
+        pyimportcode = "pyimport " + ";\npyimport ".join(pyimports) + ";\n"
+    else:
+        pyimportcode = "";
+    
     codeToRun = pyimportcode + "function cc() {" + code.replace("pyimport","").replace("__class__","") + "}"
 
     print("Evaluating: {}".format(codeToRun))
@@ -217,7 +234,7 @@ def doEval(code, ret, args = {}, pyimports = []):
     context = js2py.EvalJs(args)
     context.execute(codeToRun)
     
-    ret["result"] = context.cc()
+    ret["result"] = str(context.cc())
 
 #End of eval funcs
     
@@ -398,5 +415,8 @@ if __name__ == "__main__":
     thread.daemon = True
     thread.start()
     
-    client.run(token)
+    try:
+        client.run(getToken("discord"))
+    except:
+        sys.exit()
     

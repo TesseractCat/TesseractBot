@@ -83,7 +83,9 @@ class MusicActions():
             self.instances[ctx.message.server.id].player.stop()
         except:
             pass
-        self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
+        
+        if voiceClient != None:
+            self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
         
     @commands.command(pass_context=True)
     async def pyv(self, ctx, *, url : str = None):
