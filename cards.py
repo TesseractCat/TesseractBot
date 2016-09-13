@@ -1,7 +1,5 @@
 import discord
 from discord.ext import commands
-import pickle
-import asyncio
 from cardAscii import Card
 import pydealer
 

@@ -1,9 +1,11 @@
 import discord
 from discord.ext import commands
-import pickle
 import asyncio
-from urllib.request import urlopen
+from bot import checkOp
 from bot import getShelfSlot
+from bot import nonAsyncRun
+from bot import printToDiscord
+from bot import safeEval
 import atexit
 
 class CustomAnimations():
@@ -11,8 +13,8 @@ class CustomAnimations():
     def __init__(self, client):
         self.client = client
     
-    @commands.command(pass_context = True)
-    async def ca(self, ctx, animName : str, *frames : str):
+    @commands.command(pass_context = True, aliases = ["ca"])
+    async def createanimation(self, ctx, animName : str, *frames : str):
         """Custom animation, put each frame in quotes"""
         
         slot = getShelfSlot(ctx.message.server.id, "CustomAnimations")
@@ -24,8 +26,8 @@ class CustomAnimations():
         await self.client.say("Animation **{}** created!".format(animName))
 
 
-    @commands.command(pass_context = True)
-    async def pa(self, ctx, delay : int, animName : str):
+    @commands.command(pass_context = True, aliases = ["pa"])
+    async def playanimation(self, ctx, delay : int, animName : str):
         """Play custom animation, it will loop 10 times"""
         
         slot = getShelfSlot(ctx.message.server.id, "CustomAnimations")

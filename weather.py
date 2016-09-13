@@ -1,7 +1,5 @@
 import discord
 from discord.ext import commands
-import pickle
-import asyncio
 import json
 from urllib.request import urlopen
 
@@ -10,8 +8,8 @@ class Weather():
     def __init__(self, client):
         self.client = client
     
-    @commands.command()
-    async def gw(self, *, searchQuery : str):
+    @commands.command(aliases = ["gw"])
+    async def getweather(self, *, searchQuery : str):
         """Gets the weather"""
         
         response = urlopen("http://api.openweathermap.org/data/2.5/weather?q={}&units=imperial&appid=6237b97deb8130b2f11042e9fe0c1297".format(searchQuery.replace(" ",",")))

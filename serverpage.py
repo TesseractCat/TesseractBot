@@ -1,8 +1,6 @@
-import cgi
 import discord
 from discord.ext import commands
 import http.server
-import threading
 import multiprocessing
 
 bot = None

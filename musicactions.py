@@ -1,13 +1,13 @@
 import discord
 from discord.ext import commands
-import pickle
 from gtts import gTTS
-from urllib.request import urlopen
 import urllib.request
 import youtube_dl
 import urllib.parse
 import json
-from bot import nonAsyncRun, checkOp, getShelfSlot
+from bot import checkOp
+from bot import getShelfSlot
+from bot import nonAsyncRun
 import asyncio
 
 class MusicActions():
@@ -16,8 +16,8 @@ class MusicActions():
         self.client = client
         self.instances = {}
         
-    @commands.command(pass_context=True)
-    async def vfskp(self, ctx):
+    @commands.command(pass_context=True, aliases = ["vfskp"])
+    async def voteforskip(self, ctx):
         """Votes to stop current music or text to speech"""
         
         if ctx.message.author.id in self.instances[ctx.message.server.id].voted:
@@ -27,41 +27,41 @@ class MusicActions():
             await self.client.say("You have voted to skip the currently playing song, there are current **{}** votes to skip this. You need **3** votes to skip a song".format(self.instances[ctx.message.server.id].votes))
             self.instances[ctx.message.server.id].voted.append(ctx.message.author.id)
      
-    @commands.command(pass_context=True)
-    async def skp(self, ctx):
+    @commands.command(pass_context=True, aliases = ["skp"])
+    async def skip(self, ctx):
         """Stops music or text to speech"""
         try:
             self.instances[ctx.message.server.id].queue[0].stop()
         except:
             pass
     
-    @commands.command(pass_context=True)
-    async def cp(self, ctx):
+    @commands.command(pass_context=True, aliases = ["cp"])
+    async def currentlyplaying(self, ctx):
         """Plays information about what's currently playing"""
         await self.client.say("Currently playing **{}**".format(self.instances[ctx.message.server.id].queue[0].title))
     
-    @commands.command(pass_context=True)
-    async def res(self, ctx):
+    @commands.command(pass_context=True, aliases = ["res"])
+    async def resume(self, ctx):
         """Resume what's currently playing"""
         self.instances[ctx.message.server.id].queue[0].resume()
         await self.client.say("Resumed!")
         
-    @commands.command(pass_context=True)
-    async def pau(self, ctx):
+    @commands.command(pass_context=True, aliases = ["pau"])
+    async def pause(self, ctx):
         """Pause what's currently playing"""
         self.instances[ctx.message.server.id].queue[0].pause()
         await self.client.say("Paused!")
     
-    @commands.command(pass_context=True)
-    async def vol(self, ctx, volume : float):
+    @commands.command(pass_context=True, aliases = ["vol"])
+    async def volume(self, ctx, volume : float):
         """Sets the volume"""
         self.instances[ctx.message.server.id].queue[0].pause()
         self.instances[ctx.message.server.id].queue[0].volume = volume
         self.instances[ctx.message.server.id].queue[0].resume()
         await self.client.say("Volume set!")
     
-    @commands.command(pass_context=True)
-    async def ptts(self, ctx, *, text : str = None):
+    @commands.command(pass_context=True, aliases = ["ptts"])
+    async def playtexttospeach(self, ctx, *, text : str = None):
         """Plays tts in the voice channel you are currently in"""
         #if await checkOp(ctx.message):
         
@@ -87,8 +87,8 @@ class MusicActions():
         if voiceClient != None:
             self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
         
-    @commands.command(pass_context=True)
-    async def pyv(self, ctx, *, url : str = None):
+    @commands.command(pass_context=True, aliases = ["pyv"])
+    async def playyoutubevideo(self, ctx, *, url : str = None):
         """Plays youtube (and some other services) video in the voice channel you are currently in, provide either a url or youtube video name"""
         if bool(urllib.parse.urlparse(url).scheme) == False:
             response = urllib.request.urlopen("https://www.googleapis.com/youtube/v3/search?part=id&q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM".format(url.replace(" ","%20")))
@@ -124,8 +124,8 @@ class MusicActions():
                 
         return voiceClient
         
-    @commands.command()
-    async def syv(self, *, searchQuery : str):
+    @commands.command(aliases = ["syv"])
+    async def searchyoutubevideos(self, *, searchQuery : str):
         """Finds the first result for a youtube search"""
         response = urllib.request.urlopen("https://www.googleapis.com/youtube/v3/search?part=id&q={}&key=AIzaSyCWey9JEsqeQiUimSQ1o5SlYr1slTRMlUM".format(searchQuery.replace(" ","%20")))
         response = response.read().decode("utf-8")
@@ -148,7 +148,8 @@ class MusicInstance():
         if len(self.queue) == 1:
             loop = asyncio.get_event_loop()
             loop.call_soon_threadsafe(asyncio.async, self.playQueue(channel))
-            
+    
+    #USE after= func to fix this up and make 100% better
     async def playQueue(self, channel):
         while True:
             if len(self.queue) > 0:

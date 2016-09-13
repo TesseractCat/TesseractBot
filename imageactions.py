@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from urllib.request import urlopen
 from imgurpython import ImgurClient
 import urllib.request
 import urllib.parse
@@ -20,8 +19,8 @@ class ImageActions():
         self.client_secret = 'e18b989f6d222e0bb792763d57623c1ac766d6aa'
         self.imgurClient = ImgurClient(self.client_id, self.client_secret)
         
-    @commands.command()
-    async def si(self, *, search : str):
+    @commands.command(aliases = ["si"])
+    async def searchimgur(self, *, search : str):
         """Searches imgur"""
         
         items = self.imgurClient.gallery_search(search,sort="score")
@@ -36,8 +35,8 @@ class ImageActions():
         except:
             await self.client.say(items[randomItem].link)
 
-    @commands.command()
-    async def sbi(self, *, searchQuery : str):
+    @commands.command(aliases = ["sbi"])
+    async def searchbingimages(self, *, searchQuery : str):
         """Searches bing images"""
         
         key = "TDZZ6YVo7aiuZu890EjYxZltaspM1oBAJkU7DCyy1i8"
@@ -55,8 +54,8 @@ class ImageActions():
         
         await self.client.say(response)
         
-    @commands.command()
-    async def sgi(self, *, searchQuery : str):
+    @commands.command(aliases = ["sgi"])
+    async def searchgoogleimages(self, *, searchQuery : str):
         """Searches google images"""
         
         try:
@@ -72,8 +71,8 @@ class ImageActions():
         
         await self.client.say(response)
 
-    @commands.command()
-    async def cap(self, url : str, fontSize : int, *, caption : str):
+    @commands.command(aliases = ["cap"])
+    async def caption(self, url : str, fontSize : int, *, caption : str):
         """Add [caption] in impact font to the bottom of [image url]"""
         
         request = urllib.request.Request(url,headers={'User-Agent': 'Mozilla/5.0'})

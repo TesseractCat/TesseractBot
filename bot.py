@@ -1,22 +1,13 @@
 import discord
 import asyncio
 import wolframalpha
-import math
-import codecs
 import brainfuck
-import pickle
-import sys
 import youtube_dl
-import random
-import time
 import subprocess
 import os
 import urbandict
-import configparser
 import xmltodict
-import html
 import urllib.request
-import signal
 from ctypes.util import find_library
 from discord.ext import commands
 from unidecode import unidecode
@@ -24,13 +15,15 @@ import re
 import markovify
 from translate import translate
 import threading
-import shelve
+from shelve import DbfilenameShelf
 import atexit
 import execjs
 import js2py
 import json
 import multiprocessing
 import builtins
+import pickle
+import shelve
 
 def nonAsyncRun(function, args):
     loop = asyncio.get_event_loop()
@@ -64,7 +57,7 @@ def getToken(service, id = None):
     tokenFile = open('botconfig', 'r')
     tokenJSON = json.loads(tokenFile.read())
     
-    if id == None:
+    if id == None or service == "discord":
         return tokenJSON[service]
     else:
         slot = getShelfSlot(id, "Tokens")
@@ -77,12 +70,116 @@ def getToken(service, id = None):
             slot.close()
             return tokenJSON[service]
 
+class AutoSyncShelf(DbfilenameShelf):
+    def __init__(self, filename, protocol=2, writeback=True):
+        DbfilenameShelf.__init__(self, filename, protocol=protocol, writeback=writeback)
+    def __setitem__(self, key, value):
+        DbfilenameShelf.__setitem__(self, key, value)
+        self.sync()
+    def __delitem__(self, key):
+        DbfilenameShelf.__delitem__(self, key)
+        self.sync()
+
+class CustomDict(dict):
+    def __init__(self, name, newData = None):
+        self._name = name
+        self._dict = {}
+        
+        if newData != None:
+            self._dict = newData
+            self.sync()
+            return
+        
+        try:
+            with open(self._name + ".dat",'rb') as f:
+                self._dict = pickle.load(f)
+        except:
+            pass
+    
+    def close(self):
+        return
+    
+    def sync(self):
+        with open(self._name + ".dat",'wb') as f:
+            pickle.dump(self._dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    def __setitem__(self, key, item): 
+        self._dict[key] = item
+        self.sync()
+
+    def __getitem__(self, key): 
+        return self._dict[key]
+
+    def __repr__(self): 
+        return repr(self._dict)
+
+    def __len__(self): 
+        return len(self._dict)
+
+    def __delitem__(self, key): 
+        del self._dict[key]
+        self.sync()
+
+    def clear(self):
+        return self._dict.clear()
+
+    def copy(self):
+        return self._dict.copy()
+
+    def has_key(self, k):
+        return self._dict.has_key(k)
+
+    def pop(self, k, d=None):
+        self._dict.pop(k, d)
+        self.sync()
+        return self._dict
+
+    def update(self, *args, **kwargs):
+        self._dict.update(*args, **kwargs)
+        self.sync()
+        return self._dict
+
+    def keys(self):
+        return self._dict.keys()
+
+    def values(self):
+        return self._dict.values()
+
+    def items(self):
+        return self._dict.items()
+
+    def pop(self, *args):
+        self._dict.pop(*args)
+        self.sync()
+        return self._dict
+
+    def __cmp__(self, dict):
+        return cmp(self._dict, dict)
+
+    def __contains__(self, item):
+        return item in self._dict
+
+    def __iter__(self):
+        return iter(self._dict)
+
+    def __unicode__(self):
+        return unicode(repr(self._dict))
+            
 def getShelfSlot(serverID, name):
     try:
         os.makedirs(os.path.join("ServerData/" + serverID))
     except:
         pass
-    return shelve.open(os.path.join("ServerData/" + serverID + "/", name), writeback=True)
+    #return shelve.open(os.path.join("ServerData/" + serverID + "/", name), writeback=True)
+    #return AutoSyncShelf(os.path.join("ServerData/" + serverID + "/", name))
+    
+    #with shelve.open(os.path.join("ServerData/" + serverID + "/", name), writeback=True) as newData:
+    #    dataToApply = {}
+    #    for key, value in newData.items():
+    #        dataToApply[key] = value
+    #    newDict = CustomDict(os.path.join("ServerData/" + serverID + "/", name), dataToApply)
+    #    return newDict
+    return CustomDict(os.path.join("ServerData/" + serverID + "/", name))
         
 def getPrefix(bot, message):
     try:
@@ -96,22 +193,20 @@ def getPrefix(bot, message):
 
 #Discord Client
 client = commands.Bot(command_prefix=getPrefix, description='Tesseract Multipurpose Bot', pm_help = True)
-
-#Wolfram Alpha Client
-waClient = wolframalpha.Client(getToken("wolframalpha"))
+loop = asyncio.get_event_loop()
 
 #Load Discord Opus
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["voting","ranks","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","spreadsheets","rss","weather","useractions","serverpage"]
+cogs = ["utilities", "stalk","voting","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","rss","weather","useractions"]#, "ranks"]
 
 #Load settings
-opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext"]
+opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext", "gr", "giveroleatrank", "setevent"]
 
 #Prefix dict
 prefixDict = {}
-        
+ 
 @client.event
 async def on_ready():
     print('Logged in!')
@@ -124,7 +219,11 @@ async def on_ready():
     for cog in cogs:
         print(cog)
         client.load_extension(cog)
-
+    
+    print('\n\nChanging username...')
+    await client.edit_profile(username="Doggo Bot")
+    print('\nDone!')
+    
 @client.event
 async def on_message(message):
     if message.author.bot == True:
@@ -135,10 +234,15 @@ async def on_message(message):
     except:
         pass
     
+    if bool(re.search("^\\{}[a-zA-Z0-9]+\\b".format(client.command_prefix(client, message)),message.content)):
+        print("Sending typing...")
+        await client.send_typing(message.channel)
+    
     for command in opCommands:
         if message.content.startswith(client.command_prefix(client, message) + command + " "):
             if await checkOp(message) == False:
                 return
+        
     
     if client.user.id in message.content:
         await bot(message)
@@ -169,8 +273,8 @@ async def on_member_unban(server, member):
     await client.send_message(announceChannel["channel"],"User **{}** has been unbanned!".format(member.name))     
     announceChannel.close()
 
-@client.command(pass_context = True)
-async def sac(ctx, channel : discord.Channel = None):
+@client.command(pass_context = True, aliases = ["sac"])
+async def setannouncementchannel(ctx, channel : discord.Channel = None):
     """Set a channel to announce bans and unbans! Run this command with no channel to reset the channel"""
     
     announceChannel = getShelfSlot(ctx.message.server.id, "AnnounceChannel")
@@ -180,8 +284,20 @@ async def sac(ctx, channel : discord.Channel = None):
     announceChannel.close()
     
     await client.say("The bot's announcement channel is now set to **{}**".format(channel.name))
+
+@client.command(pass_context = True, aliases = ["stfs"])
+async def settokenforservice(ctx, service : str = None, *, token : str = None):
+    """Set a token for apis, run without any parameters for a list"""
     
-@client.command(pass_context = True)
+    if service == None and token == None:
+        await client.say("**--- API Keys/Tokens to set ---**\nDiscord\nWolframAlpha\nImgurId and ImgurSecret\nYoutubeSearch\nGoogleImageSearch")
+        return
+
+    slot = getShelfSlot(id, "Tokens")
+    slot[service.lower()] = token
+    slot.close()
+
+@client.command(pass_context = True, aliases = ["spr"])
 async def setprefix(ctx, *, prefix : str = "$"):
     slot = getShelfSlot(ctx.message.server.id, "Prefix")
     slot["Prefix"] = prefix
@@ -192,29 +308,28 @@ async def setprefix(ctx, *, prefix : str = "$"):
     
 async def bot(message):
     """Commune with the bot!"""
+    
+    await client.send_typing(message.channel)
+    
     mitsukuResponse = subprocess.run(["node","mitsuku.js",message.content.split(" ",1)[1]], stdout=subprocess.PIPE).stdout
     if message.server.me.nick != None:
         mitsukuResponse = re.compile(re.escape('mitsuku'), re.IGNORECASE).sub(message.server.me.nick,str(mitsukuResponse))
     else:
         mitsukuResponse = re.compile(re.escape('mitsuku'), re.IGNORECASE).sub(message.server.me.name,str(mitsukuResponse))
     await client.send_message(message.channel, "<@{0}".format(message.author.id) + "> " + str(mitsukuResponse)[2:][:-3])
-
-@client.command(pass_context = True)
-async def ev(ctx, *, code : str):
-    """Evaluates a python statement"""
-    #context = js2py.EvalJs({"message":ctx.message})
-    await client.say(safeEval("return " + code, {"message": ctx.message, "list": getattr(builtins, "list")}))
     
 #Eval Funcs
     
-def safeEval(code, args = {}, pyimports = []):
+def safeEval(code, args = {}, pyimports = [], acceptableWaitTime = 1):
     manager = multiprocessing.Manager()
     ret = manager.dict()
 
+    #print("Evaluation code with wait time: {}".format(acceptableWaitTime))
+    
     p = multiprocessing.Process(target=doEval, name="doEval", args = (code, ret, args, pyimports))
     p.start()
     
-    p.join(1)
+    p.join(acceptableWaitTime)
     if p.is_alive():
         p.terminate()
         p.join()
@@ -229,194 +344,31 @@ def doEval(code, ret, args = {}, pyimports = []):
     
     codeToRun = pyimportcode + "function cc() {" + code.replace("pyimport","").replace("__class__","") + "}"
 
-    print("Evaluating: {}".format(codeToRun))
+    #print("Evaluating: {}".format(codeToRun))
     
     context = js2py.EvalJs(args)
     context.execute(codeToRun)
     
     ret["result"] = str(context.cc())
 
+def doUrlopen(url):
+    return str(urllib.request.urlopen(urllib.request.Request(str(url)[1:-1],data=None,headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'})).read())
+    
 #End of eval funcs
-    
-@client.command(pass_context = True)
-async def rep(ctx, user : discord.User = None):
-    repDict = getShelfSlot(ctx.message.server.id, "Rep")
-    
-    if (user == ctx.message.author):
-        await client.say("You can't give yourself rep!")
-        return
-    
-    if (user == None):
-        try:
-            await client.say("You have `{}` rep!".format(repDict[ctx.message.author.id]))
-        except:
-            await client.say("You have no rep!")
-    else:
-        try:
-            repDict[user.id] += 1
-        except:
-            repDict[user.id] = 1
-            
-        await client.say("1 rep given to {}, they currently have `{}` rep.".format(user.mention, repDict[user.id]))
-    
-    repDict.close()
-    
-@client.command()
-async def df(word : str, defNum : int = 1):
-    """Defines a word"""
-    
-    await client.say(urbandict.define(word)[defNum-1]['def'])
-        
-@client.command()
-async def bf(bfsrc : str, bfinput : str = ""):
-    """Executes brainfuck code"""
-    
-    bftext = ""
 
-    bftext += "**--- Brainfuck result ---**\n"
-        
-    bftext += "```" + brainfuck.bf(bfsrc, 0, len(bfsrc) - 1, bfinput, 0, 1000000)
-    await client.say(bftext[:1500] + " ```")
-
-@client.command(pass_context = True)
-async def wa(ctx,*, search : str):
-    """Gets Wolfram Alpha result for [search] put a 'true' at the beginning of your search to enable images."""
-    
-    watext = ""
-    watext += "**--- Wolfram Alpha result for: " + search + " ---**\n"
-    await client.send_typing(ctx.message.channel)
-    
-    if search.split(" ")[0].lower() == "true":
-        waresult = waClient.query(search.split(" ",1)[1])
-    else:
-        waresult = waClient.query(search)
-    
-    for pod in waresult.pods:
-        watext+="**"+pod.title+"**\n"
-        if pod.text == None and search.split(" ")[0].lower() == "true":
-            watext+=pod.img + "\n"
-            await client.say(watext)
-            watext = ""
-        elif pod.text != None:
-            #watext+=bytes(pod.text.replace("\\:","\\u"),'utf-8').decode("unicode_escape") + "\n"
-            watext+=pod.text.replace("\\:","\\u") + "\n"
-    if len(waresult.pods) < 1:
-        watext += "*No results, please rephrase your query.*"
-    await client.say(watext)
-
-@client.group(pass_context = True)
-async def quote(ctx):
-    """Manage quotes, run this command with no subcommands to get a random quote"""
-    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
-    if "quotes" not in quotes:
-        quotes["quotes"] = []
-    if ctx.invoked_subcommand == None:
-        if len(ctx.message.content.split(" "))>1:
-            quote = int(ctx.message.content.split(" ")[1])
-        else:
-            quote = None
-    
-        if quote == None:
-            quoteRand = random.choice(quotes["quotes"])
-            await client.say("**Quote #{}**\n{}".format(quotes["quotes"].index(quoteRand)+1,quoteRand))
-            return
-            
-        try:
-            await client.say(quotes["quotes"][quote-1])
-        except:
-            await client.say("That's not a quote!")
-    quotes.close()
-    
-    
-@quote.command(pass_context = True)
-async def add(ctx, *, quote : str = None):
-    """Add a quote"""
-    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
-    quotes["quotes"].append("{} - **{}** in **{}** at **{}**".format(quote,ctx.message.author.name,ctx.message.channel.name,time.strftime("%d/%m/%Y")))
-    await client.say("Quote added as #{}!".format(len(quotes["quotes"])))
-    quotes.close()
-
-@quote.command(pass_context = True)
-async def delete(ctx, num : int):
-    """Delete a quote"""
-    quotes = getShelfSlot(ctx.message.server.id, "Quotes")
-    quotes["quotes"][num-1] = "Deleted!"
-    await client.say("Quote deleted!")
-    quotes.close()
-        
-@client.command(pass_context = True)
-async def mal(ctx, *, searchQuery : str):
-    """Search myanimelist"""
-    url = "http://myanimelist.net/api/anime/search.xml?q={}".format(searchQuery.replace(" ","%20"))
-        
-    password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-    password_mgr.add_password(None, url, "discorddoggobot", "discordbotmal")
-    handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-    opener = urllib.request.build_opener(handler)
-    
-    response = opener.open(url)
-    response = response.read().decode("utf-8")
-    doc = xmltodict.parse(response)
-    result = doc["anime"]["entry"][0]
-    
-    await client.say("**--- Result for search: {} ---**\nTitle: **{}**\nEpisodes: **{}**\nScore: **{}**\nType: **{}**\nStatus: **{}**\n\nSynopsis: *{}*\n\nImage: {}".format(searchQuery, result["title"],result["episodes"],result["score"],result["type"],result["status"],html.unescape(re.sub(re.compile('<.*?>'), '', result["synopsis"])),result["image"]))
-    
-@client.command(pass_context = True)
-async def mkv(ctx, channel : discord.Channel, messages : int = 500, stateSize : int = 1):
-    """Make a markov chain of a channel"""
-    text = ""
-    async for message in client.logs_from(channel, limit=messages):
-        text += message.content.replace("<@","@") + "\n"
-    text_model = markovify.Text(text, state_size=stateSize)
-    await client.say(text_model.make_sentence(max_overlap_ratio = 0.9,max_overlap_total=30,tries=1000))
-    
-@client.command(pass_context = True)
-async def trans(ctx, *, text : str):
-    """Translate text to english (this function is very finnicky)"""
-    if len(ctx.message.content.rsplit(" ",1)[1]) == 2:
-        await client.say(translate(ctx.message.content.rsplit(" ",1)[0].split(" ",1)[1],ctx.message.content.rsplit(" ",1)[1]))
-    else:
-        await client.say(translate(text,"en"))
-
-@client.command(pass_context = True)
-async def remind(ctx, time : int, unit : str, *, text : str):
-    thread = threading.Thread(target=doRemind,args=(ctx, time, unit.lower(), text, asyncio.get_event_loop()))
-    thread.start()
-
-def doRemind(ctx, timeToSleep, unit, text, loop):
-    if "second" in unit:
-        sleepTime = (timeToSleep)
-    elif "minute" in unit:
-        sleepTime = (timeToSleep*60)
-    elif "hour" in unit:
-        sleepTime = (timeToSleep*60*60)
-    elif "day" in unit:
-        sleepTime = (timeToSleep*60*60*24)
-    else:
-       loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.channel,"That is not a valid time unit, the available units are: seconds, minutes, hours, days"))
-       return
-    
-    loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.channel,"Ok! I will remind you in `{}` {}".format(timeToSleep, unit)))
-    
-    time.sleep(sleepTime)
-    
-    loop.call_soon_threadsafe(asyncio.async, client.send_message(ctx.message.author, "Hello! `{}` {} ago you asked me to remind you of:\n\n{}".format(timeToSleep, unit, text)))
-
-def get_input():
-    while True:
-        try:
-            user_input = input("> ")
-        except KeyboardInterrupt:
-            pass
+def run_discord():
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(client.start(getToken("discord")))
+    loop.close()
     
 if __name__ == "__main__":
     print("Booting up...")
-    thread = threading.Thread(target=get_input)
-    thread.daemon = True
-    thread.start()
+    #loop = asyncio.get_event_loop()
+    #thread = threading.Thread(target=run_discord)
+    #thread.start()
     
-    try:
-        client.run(getToken("discord"))
-    except:
-        sys.exit()
+    client.run(getToken("discord"))
+    
+    #while True:
+    #    user_input = input("> ")
     

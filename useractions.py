@@ -1,8 +1,5 @@
 import discord
 from discord.ext import commands
-import pickle
-import asyncio
-from urllib.request import urlopen
 from bot import getShelfSlot
 
 class UserActions():
@@ -31,20 +28,24 @@ class UserActions():
             await self.client.say("**{}** is not an operator!".format(member.name))
         operators.close()
     
-    @commands.command(pass_context = True)
-    async def gr(self, ctx, member : discord.Member, *, role : str):
+    @commands.command(pass_context = True, aliases = ["gr"])
+    async def giverole(self, ctx, member : discord.Member, *, role : str):
         """Gives role"""
         
-        if ctx.message.author.permissions_in(ctx.message.channel).manage_channels:
-            await self.client.add_roles(member, discord.utils.get(ctx.message.server.roles, name=role))
+        await self.client.add_roles(member, discord.utils.get(ctx.message.server.roles, name=role))
     
-    @commands.command(pass_context = True)
-    async def rr(self, ctx, member : discord.Member, *, role : str):
+    @commands.command(pass_context = True, aliases = ["rr"])
+    async def removerole(self, ctx, member : discord.Member, *, role : str):
         """Remove role"""
         
-        if ctx.message.author.permissions_in(ctx.message.channel).manage_channels:
-            await self.client.remove_roles(member, discord.utils.get(ctx.message.server.roles, name=role))
+        await self.client.remove_roles(member, discord.utils.get(ctx.message.server.roles, name=role))
+    
+    @commands.command(pass_context = True, aliases = ["giurl"])
+    async def getimageurl(self, ctx, name : str):
+        """Get image url by name"""
         
+        await self.client.say(discord.utils.find(lambda m: m.name.lower() == name.lower(), ctx.message.server.members).avatar_url)
+    
     @commands.command(pass_context = True, aliases = ["whoami"])
     async def whois(self, ctx, member : discord.Member = None):
         if member == None:

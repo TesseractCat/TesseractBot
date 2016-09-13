@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import pickle
 import asyncio
 import feedparser
 from bot import nonAsyncRun
@@ -9,10 +8,9 @@ from pytz import timezone
 import re
 import html
 import threading
-from bot import nonAsyncRun, getShelfSlot
+from bot import getShelfSlot
+from bot import nonAsyncRun
 import atexit
-import copy
-import time
 
 class RSS():
     
