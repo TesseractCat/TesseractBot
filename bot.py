@@ -10,6 +10,7 @@ import xmltodict
 import urllib.request
 from ctypes.util import find_library
 from discord.ext import commands
+from discord.ext.commands import formatter
 from unidecode import unidecode
 import re
 import markovify
@@ -35,16 +36,12 @@ def printToDiscord(clientObj, channel, text):
 async def checkOp(message):
     operators = getShelfSlot(message.server.id, "Operators")
     userPerms = message.author.permissions_in(message.channel)
-    
-    if "ids" not in operators:
-        operators["ids"] = []
         
-    if message.author.id in operators["ids"] or userPerms.administrator == True or userPerms.manage_server == True or message.author.id == "129757604506370048":
+    if message.author.id in operators.keys() or userPerms.administrator == True or userPerms.manage_server == True or message.author.id == "129757604506370048":
         return True
     else:
         await client.send_message(message.channel,"You are not a bot operator, so you cannot use this command.")
         return False
-    operators.close()
     
 def getToken(service, id = None):
     #Make a JSON file containing your tokens, like:
@@ -192,7 +189,17 @@ def getPrefix(bot, message):
         return "$"
 
 #Discord Client
-client = commands.Bot(command_prefix=getPrefix, description='Tesseract Multipurpose Bot', pm_help = True)
+
+class NewFormatter(formatter.HelpFormatter):
+    def get_ending_note(self):
+        command_name = self.context.invoked_with
+        return "Type {0}{1} command for more info on a command.\n" \
+               "You can also type {0}{1} category for more info on a category.\n" \
+               "Visit http://tesseractc.at/discord/help for more command help.".format(self.clean_prefix, command_name)
+
+help_formatter = NewFormatter(width=100)
+
+client = commands.Bot(command_prefix=getPrefix, description='Tesseract Multipurpose Bot', pm_help = True, formatter = help_formatter)
 loop = asyncio.get_event_loop()
 
 #Load Discord Opus
@@ -202,10 +209,18 @@ discord.opus.load_opus(find_library("opus"))
 cogs = ["utilities", "stalk","voting","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","rss","weather","useractions"]#, "ranks"]
 
 #Load settings
-opCommands = ["sn", "sa", "skp", "setrank", "setrankbyname", "op", "deop", "rldext", "gr", "giveroleatrank", "setevent"]
+opCommands = ["setnick", "setavatar", "skip", "setrank", "setrankbyname", "op", "deop", "reloadextension", "giverole", "giveroleatrank", "setevent"]
 
 #Prefix dict
 prefixDict = {}
+
+@client.check
+def whitelist(ctx):
+    print("Command run!: " + ctx.command.name)
+    if ctx.command.name in opCommands:
+        return loop.run_until_complete(checkOp(ctx.message))
+    else:
+        return True
  
 @client.event
 async def on_ready():
@@ -238,10 +253,10 @@ async def on_message(message):
         print("Sending typing...")
         await client.send_typing(message.channel)
     
-    for command in opCommands:
-        if message.content.startswith(client.command_prefix(client, message) + command + " "):
-            if await checkOp(message) == False:
-                return
+    #for command in opCommands:
+    #    if message.content.startswith(client.command_prefix(client, message) + command.lower()):
+    #        if await checkOp(message) == False:
+    #            return
         
     
     if client.user.id in message.content:
@@ -367,7 +382,11 @@ if __name__ == "__main__":
     #thread = threading.Thread(target=run_discord)
     #thread.start()
     
-    client.run(getToken("discord"))
+    while True:
+        try:
+            client.run(getToken("discord"))
+        except:
+            pass
     
     #while True:
     #    user_input = input("> ")

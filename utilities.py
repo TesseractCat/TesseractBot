@@ -17,6 +17,7 @@ import urbandict
 from translate import translate
 import html
 import re
+import time
 
 class CustomUtilities():
     
@@ -33,7 +34,7 @@ class CustomUtilities():
         """Manage quotes, run this command with no subcommands to get a random quote"""
         quotes = getShelfSlot(ctx.message.server.id, "Quotes")
         if "quotes" not in quotes:
-            quotes["quotes"] = []
+            quotes.update({"quotes":[]})
         if ctx.invoked_subcommand == None:
             if len(ctx.message.content.split(" "))>1:
                 quote = int(ctx.message.content.split(" ")[1])
@@ -55,17 +56,18 @@ class CustomUtilities():
     async def add(self, ctx, *, quote : str = None):
         """Add a quote"""
         quotes = getShelfSlot(ctx.message.server.id, "Quotes")
-        quotes["quotes"].append("{} - **{}** in **{}** at **{}**".format(quote,ctx.message.author.name,ctx.message.channel.name,time.strftime("%d/%m/%Y")))
+        quotes["quotes"] = quotes["quotes"] + ["{} - **{}** in **{}** at **{}**".format(quote,ctx.message.author.name,ctx.message.channel.name,time.strftime("%d/%m/%Y"))]
         await self.client.say("Quote added as #{}!".format(len(quotes["quotes"])))
-        quotes.close()
+        #quotes.close()
 
     @quote.command(pass_context = True, aliases = ["del"])
     async def delete(self, ctx, num : int):
         """Delete a quote"""
         quotes = getShelfSlot(ctx.message.server.id, "Quotes")
         quotes["quotes"][num-1] = "Deleted!"
+        quotes.sync()
         await self.client.say("Quote deleted!")
-        quotes.close()
+        #quotes.close()
         
     # Quotes done
     
@@ -188,7 +190,7 @@ class CustomUtilities():
     async def markov(self, ctx, channel : discord.Channel, messages : int = 500, stateSize : int = 1):
         """Make a markov chain of a channel"""
         text = ""
-        async for message in client.logs_from(channel, limit=messages):
+        async for message in self.client.logs_from(channel, limit=messages):
             text += message.content.replace("<@","@") + "\n"
         text_model = markovify.Text(text, state_size=stateSize)
         await self.client.say(text_model.make_sentence(max_overlap_ratio = 0.9,max_overlap_total=30,tries=1000))

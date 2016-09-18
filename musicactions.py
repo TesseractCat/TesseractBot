@@ -31,7 +31,8 @@ class MusicActions():
     async def skip(self, ctx):
         """Stops music or text to speech"""
         try:
-            self.instances[ctx.message.server.id].queue[0].stop()
+            if len(self.instances[ctx.message.server.id].queue) > 0:
+                self.instances[ctx.message.server.id].queue[0].stop()
         except:
             pass
     

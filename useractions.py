@@ -10,11 +10,7 @@ class UserActions():
     @commands.command(pass_context = True)
     async def op(self, ctx, member : discord.Member):
         operators = getShelfSlot(ctx.message.server.id, "Operators")
-        try:
-            operators["ids"].append(member.id)
-        except:
-            operators["ids"] = [member.id]
-        operators.close()
+        operators.update({member.id:member.name})
         
         await self.client.say("**{}** opped!".format(member.name))
         
@@ -22,11 +18,18 @@ class UserActions():
     async def deop(self, ctx, member : discord.Member):
         operators = getShelfSlot(ctx.message.server.id, "Operators")
         try:
-            operators["ids"].remove(member.id)
+            del operators[member.id]
             await self.client.say("**{}** deopped!".format(member.name))
         except:
             await self.client.say("**{}** is not an operator!".format(member.name))
         operators.close()
+        
+    @commands.command(pass_context = True)
+    async def listop(self, ctx):
+        operators = getShelfSlot(ctx.message.server.id, "Operators")
+        await self.client.say("**--- Operators ---**")
+        for id, name in operators.items():
+            await self.client.say("`{}`".format(name))
     
     @commands.command(pass_context = True, aliases = ["gr"])
     async def giverole(self, ctx, member : discord.Member, *, role : str):
