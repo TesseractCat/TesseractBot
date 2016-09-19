@@ -26,7 +26,16 @@ class MusicActions():
             self.instances[ctx.message.server.id].votes += 1
             await self.client.say("You have voted to skip the currently playing song, there are current **{}** votes to skip this. You need **3** votes to skip a song".format(self.instances[ctx.message.server.id].votes))
             self.instances[ctx.message.server.id].voted.append(ctx.message.author.id)
-     
+    
+    @commands.command(pass_context=True, aliases = ["clrqueue"])
+    async def clearqueue(self, ctx):
+        try:
+            if len(self.instances[ctx.message.server.id].queue) > 0:
+                self.instances[ctx.message.server.id].queue[0].stop()
+                self.instances[ctx.message.server.id].queue = []
+        except:
+            pass
+    
     @commands.command(pass_context=True, aliases = ["skp"])
     async def skip(self, ctx):
         """Stops music or text to speech"""
@@ -39,7 +48,10 @@ class MusicActions():
     @commands.command(pass_context=True, aliases = ["cp"])
     async def currentlyplaying(self, ctx):
         """Plays information about what's currently playing"""
-        await self.client.say("Currently playing **{}**".format(self.instances[ctx.message.server.id].queue[0].title))
+        try:
+            await self.client.say("Currently playing **{}**".format(self.instances[ctx.message.server.id].queue[0].title))
+        except:
+             await self.client.say("Currently playing text to speech and or not playing anything")
     
     @commands.command(pass_context=True, aliases = ["res"])
     async def resume(self, ctx):
@@ -64,7 +76,6 @@ class MusicActions():
     @commands.command(pass_context=True, aliases = ["ptts"])
     async def playtexttospeach(self, ctx, *, text : str = None):
         """Plays tts in the voice channel you are currently in"""
-        #if await checkOp(ctx.message):
         
         voiceClient = await self.getVoiceClient(ctx)
         
@@ -77,16 +88,15 @@ class MusicActions():
             tts = gTTS(text=text, lang='en')
         tts.save("tts.mp3")
         
-        if ctx.message.server.id not in self.instances:
-            self.instances[ctx.message.server.id] = MusicInstance(self.client)
+        mInstance = self.getMusicInstance(ctx.message.server)
         
         try:
-            self.instances[ctx.message.server.id].player.stop()
+            mInstance.player.stop()
         except:
             pass
         
         if voiceClient != None:
-            self.instances[ctx.message.server.id].addToQueue(voiceClient.create_ffmpeg_player('tts.mp3'), ctx.message.channel)
+            mInstance.addToQueue(voiceClient.create_ffmpeg_player('tts.mp3', after=mInstance.playNext), ctx.message.channel)
         
     @commands.command(pass_context=True, aliases = ["pyv"])
     async def playyoutubevideo(self, ctx, *, url : str = None):
@@ -99,17 +109,21 @@ class MusicActions():
         
         voiceClient = await self.getVoiceClient(ctx)
         
-        if ctx.message.server.id not in self.instances:
-            self.instances[ctx.message.server.id] = MusicInstance(self.client)
+        mInstance = self.getMusicInstance(ctx.message.server)
         
         try:
-            self.instances[ctx.message.server.id].player.stop()
+            mInstance.player.stop()
         except:
             pass
         
         if voiceClient != None:
-            self.instances[ctx.message.server.id].addToQueue(await voiceClient.create_ytdl_player(url), ctx.message.channel)     
+            mInstance.addToQueue(await voiceClient.create_ytdl_player(url, after=mInstance.playNext), ctx.message.channel)
 
+    def getMusicInstance(self, server):
+        if server.id not in self.instances:
+            self.instances[server.id] = MusicInstance(self.client, asyncio.get_event_loop())
+        return self.instances[server.id]
+            
     async def getVoiceClient(self, ctx):
         try:
             if self.client.voice_client_in(ctx.message.server) == None:
@@ -135,47 +149,53 @@ class MusicActions():
     
         
 class MusicInstance():
-    def __init__(self, client):
+    def __init__(self, client, loop):
         self.player = None
         self.serverId = None
         self.queue = []
         self.votes = 0
         self.voted = []
         self.client = client
+        self.loop = loop
+        self.channel = None
     
     def addToQueue(self, player, channel):
-        nonAsyncRun(self.client.send_message, (channel, "Added to queue, you are currently **#{}** in the queue".format(len(self.queue)+1)))
+        self.channel = channel
+        try:
+            nonAsyncRun(self.client.send_message, (channel, "**{}** added to queue, you are currently **#{}** in the queue".format(player.title, len(self.queue)+1)))
+        except:
+            nonAsyncRun(self.client.send_message, (channel, "Added to queue, you are currently **#{}** in the queue".format(len(self.queue)+1)))
         self.queue.append(player)
+        
         if len(self.queue) == 1:
-            loop = asyncio.get_event_loop()
-            loop.call_soon_threadsafe(asyncio.async, self.playQueue(channel))
+            self.queue[0].start()
     
-    #USE after= func to fix this up and make 100% better
-    async def playQueue(self, channel):
-        while True:
+    def playNext(self):
+        print("Playing next song!")
+        
+        #try:
+        #    self.queue[0].stop()
+        #except:
+        #    pass
+        
+        self.queue.pop(0)
+        self.votes = 0
+        self.voted = []
+        #print("Now playing **{}**...".format(self.queue[0].title))
+        try:
+            #await self.client.send_message(self.channel, "Now playing **{}**...".format(self.queue[0].title))
+            nonAsyncRun(self.client.send_message, (self.channel, "Now playing **{}**...".format(self.queue[0].title)))
+            self.queue[0].start()
+            print("Done playing next song!")
+        except:
             if len(self.queue) > 0:
-                if self.queue[0].is_done():
-                    self.queue.pop(0)
-                    self.votes = 0
-                    self.voted = []
-                    try:
-                        await self.client.send_message(channel, "Now playing **{}**...".format(self.queue[0].title))
-                    except:
-                        if len(self.queue) > 0:
-                            await self.client.send_message(channel, "Now playing next item in queue...")
-                        else:
-                            await self.client.send_message(channel, "Done playing music!")
-                            await self.client.voice_client_in(channel.server).disconnect()
-                elif self.votes > 2:
-                    self.queue[0].stop()
-                else:
-                    try:
-                        self.queue[0].start()
-                    except:
-                        pass
+                #await self.client.send_message(self.channel, "Now playing next item in queue...")
+                nonAsyncRun(self.client.send_message, (self.channel, "Now playing next item in queue..."))
+                self.queue[0].start()
             else:
-                break
-            await asyncio.sleep(1.0)
+                #await self.client.send_message(self.channel, "Done playing music!")
+                nonAsyncRun(self.client.send_message, (self.channel, "Done playing!"))
+                #await self.client.voice_client_in(self.channel.server).disconnect()
         
 def setup(client):
     client.add_cog(MusicActions(client))

@@ -42,6 +42,15 @@ async def checkOp(message):
     else:
         await client.send_message(message.channel,"You are not a bot operator, so you cannot use this command.")
         return False
+        
+def checkOpNonAsync(message):
+    operators = getShelfSlot(message.server.id, "Operators")
+    userPerms = message.author.permissions_in(message.channel)
+        
+    if message.author.id in operators.keys() or userPerms.administrator == True or userPerms.manage_server == True or message.author.id == "129757604506370048":
+        return True
+    else:
+        return False
     
 def getToken(service, id = None):
     #Make a JSON file containing your tokens, like:
@@ -218,7 +227,7 @@ prefixDict = {}
 def whitelist(ctx):
     print("Command run!: " + ctx.command.name)
     if ctx.command.name in opCommands:
-        return loop.run_until_complete(checkOp(ctx.message))
+        return checkOpNonAsync(ctx.message)
     else:
         return True
  
@@ -262,7 +271,10 @@ async def on_message(message):
     if client.user.id in message.content:
         await bot(message)
     
-    await client.process_commands(message)
+    try:
+        await client.process_commands(message)
+    except:
+        pass
 
 #@client.event
 #async def on_error(event,*args,**kwargs):
@@ -371,10 +383,10 @@ def doUrlopen(url):
     
 #End of eval funcs
 
-def run_discord():
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(client.start(getToken("discord")))
-    loop.close()
+#def run_discord():
+#    asyncio.set_event_loop(loop)
+#    loop.run_until_complete(client.start(getToken("discord")))
+#    loop.close()
     
 if __name__ == "__main__":
     print("Booting up...")
