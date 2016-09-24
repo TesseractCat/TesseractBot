@@ -8,6 +8,8 @@ from bot import safeEval
 import atexit
 import js2py
 import jsonpickle
+import asyncio
+import threading
 
 class CustomCommands():
     
@@ -15,6 +17,7 @@ class CustomCommands():
         self.client = client
         self.tempCommands = {}
         self.tempEvents = {}
+        self.loop = asyncio.get_event_loop()
         
         self.update_cc_arr()
         self.update_ce_arr()
@@ -38,20 +41,28 @@ class CustomCommands():
         if message.author == self.client.user:
             return
         
-        await self.procNewMessageEvent(message)
+        t = threading.Thread(target=self.runPNME, args=(message,))
+        t.start()
         
         for key in self.tempCommands[message.server.id]:
             if message.content.split(" ")[0] == key and message.author != self.client.user:
                 await self.client.send_message(message.channel, safeEval(self.tempCommands[message.server.id][key], {"client": {"servers":self.client.servers, "user":self.client.user}, "message": message}, ["urllib"], 1))
+    
+    def runPNME(self, message):
+        self.loop.call_soon_threadsafe(asyncio.async, self.procNewMessageEvent(message))
     
     async def procNewMessageEvent(self, message):
         if message.author == self.client.user:
             return
     
         if "onmessage" in self.tempEvents[message.server.id]:
+            #"post": (lambda x: self.loop.call_soon_threadsafe(asyncio.async, self.client.send_message(message.channel, x))),
             messageResult = safeEval(self.tempEvents[message.server.id]["onmessage"], {"client": {"servers":self.client.servers, "user":self.client.user}, "message": message}, [], 1)
             
-            #print("RESULT OF EVENT: " + messageResult)
+            #print("RESULT OF EVENT: " + str(actionArr))
+            
+            if messageResult == None:
+                return
             
             if messageResult.lower() == "delete":
                 print("Deleting message, triggered by event.")

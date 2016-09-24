@@ -102,5 +102,22 @@ class BotActions():
         
         await self.client.say("Done!")
         
+    @commands.command(aliases = ["dsblext"])
+    async def disableextension(self, *, ext : str = None):
+        """Reload bot extension"""
+        
+        if (ext == None):
+            await self.client.say("Please choose an extension, currently available to be disabled are:\n```" + "\n".join(bot.cogs) + "```")
+            return
+        
+        await self.client.say("Disabling extension!")
+        
+        try:
+            self.client.unload_extension(ext)
+        except:
+            pass
+        
+        await self.client.say("Done!")
+        
 def setup(client):
     client.add_cog(BotActions(client))

@@ -215,10 +215,11 @@ loop = asyncio.get_event_loop()
 discord.opus.load_opus(find_library("opus"))
 
 #Cogs to load
-cogs = ["utilities", "stalk","voting","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","rss","weather","useractions"]#, "ranks"]
+cogs = ["utilities", "stalk","voting","pastebin","customcommands","customanimations","botactions","musicactions","imageactions","cards","rss","weather","useractions", "ranks"]
 
 #Load settings
-opCommands = ["setnick", "setavatar", "skip", "setrank", "setrankbyname", "op", "deop", "reloadextension", "giverole", "giveroleatrank", "setevent"]
+opCommands = ["setnick", "setavatar", "skip", "setrank", "setrankbyname", "op", "deop", "reloadextension", "giverole", "giveroleatrank", "setevent", "clearqueue"]
+adminCommands = ["setavatar"]
 
 #Prefix dict
 prefixDict = {}
@@ -226,6 +227,10 @@ prefixDict = {}
 @client.check
 def whitelist(ctx):
     print("Command run!: " + ctx.command.name)
+    if ctx.command.name in adminCommands:
+        if ctx.message.author.id != "129757604506370048":
+            return False
+    
     if ctx.command.name in opCommands:
         return checkOpNonAsync(ctx.message)
     else:
@@ -242,7 +247,10 @@ async def on_ready():
     
     for cog in cogs:
         print(cog)
-        client.load_extension(cog)
+        try:
+            client.load_extension(cog)
+        except:
+            pass
     
     print('\n\nChanging username...')
     await client.edit_profile(username="Doggo Bot")
@@ -262,19 +270,10 @@ async def on_message(message):
         print("Sending typing...")
         await client.send_typing(message.channel)
     
-    #for command in opCommands:
-    #    if message.content.startswith(client.command_prefix(client, message) + command.lower()):
-    #        if await checkOp(message) == False:
-    #            return
-        
-    
     if client.user.id in message.content:
         await bot(message)
     
-    try:
-        await client.process_commands(message)
-    except:
-        pass
+    await client.process_commands(message)
 
 #@client.event
 #async def on_error(event,*args,**kwargs):
@@ -361,7 +360,10 @@ def safeEval(code, args = {}, pyimports = [], acceptableWaitTime = 1):
         p.terminate()
         p.join()
     
-    return ret["result"]
+    try:
+        return ret["result"]
+    except:
+        return None
     
 def doEval(code, ret, args = {}, pyimports = []):
     if pyimports != []:
@@ -373,7 +375,10 @@ def doEval(code, ret, args = {}, pyimports = []):
 
     #print("Evaluating: {}".format(codeToRun))
     
-    context = js2py.EvalJs(args)
+    baseDict = {}
+    baseDict.update(args)
+    
+    context = js2py.EvalJs(baseDict)
     context.execute(codeToRun)
     
     ret["result"] = str(context.cc())

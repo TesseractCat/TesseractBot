@@ -24,13 +24,26 @@ class Voting():
         await self.client.say("Poll canceled!")
     
     @commands.command(pass_context = True)
-    async def vote(self, ctx, name, *, option):
-        if ctx.message.author.id not in self.polls[name]["voted"]:
-            self.polls[name][option] += 1
-            self.polls[name]["voted"].append(ctx.message.author.id)
-            await self.client.say("You have voted for {}, there now **{}** votes.".format(option,self.polls[name][option]))
-        else:
-            await self.client.say("You have already voted, if you want to stop a poll, do $cancelpoll.")
+    #async def vote(self, ctx, name, *, option):
+    async def vote(self, ctx, *, text):
+        #if ctx.message.author.id not in self.polls[name]["voted"]:
+            #self.polls[name][option] += 1
+            #self.polls[name]["voted"].append(ctx.message.author.id)
+            
+        for pname, poll in self.polls.items():
+            for oname, option in poll.items():
+                if text.lower().endswith(oname.lower()):
+                    if ctx.message.author.id not in self.polls[pname]["voted"]:
+                        self.polls[pname][oname] += 1
+                        self.polls[pname]["voted"].append(ctx.message.author.id)
+                        await self.client.say("You have voted for {}, there now **{}** votes.".format(pname,self.polls[pname][oname]))
+                    else:
+                        await self.client.say("You have already voted, if you want to stop a poll, do $cancelpoll.")
+                    break
+            else:
+                continue
+            break
+                                   
     
     @commands.command()
     async def poll(self, *, name):
